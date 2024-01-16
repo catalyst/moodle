@@ -40,7 +40,7 @@ require_once(__DIR__.'/../../tests/fixtures/event_fixtures.php');
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \moodle_read_slave_trait
  */
-class dml_read_slave_test extends \base_testcase {
+final class dml_read_slave_test extends \database_driver_testcase {
 
     /** @var float */
     static private $dbreadonlylatency = 0.8;
@@ -458,6 +458,8 @@ class dml_read_slave_test extends \base_testcase {
      * @return void
      */
     public function test_read_only_conn_fail(): void {
+        $this->resetDebugging();
+
         $DB = $this->new_db(false, 'test_ro_fail');
 
         $this->assertEquals(0, $DB->perf_get_reads_slave());
@@ -467,6 +469,15 @@ class dml_read_slave_test extends \base_testcase {
         $this->assertEquals('test_rw::test:test', $handle);
         $readsslave = $DB->perf_get_reads_slave();
         $this->assertEquals(0, $readsslave);
+
+        $debugging = array_map(function ($d) {
+            return $d->message;
+        }, $this->getDebuggingMessages());
+        $this->resetDebugging();
+        $this->assertEquals([
+            'Readonly db connection failed for host test_ro_fail: test_ro_fail',
+            'Readwrite db connection succeeded for host test_rw',
+        ], $debugging);
     }
 
     /**
@@ -476,6 +487,8 @@ class dml_read_slave_test extends \base_testcase {
      * @return void
      */
     public function test_read_only_conn_first_fail(): void {
+        $this->resetDebugging();
+
         $DB = $this->new_db(false, ['test_ro_fail', 'test_ro_ok']);
 
         $this->assertEquals(0, $DB->perf_get_reads_slave());
@@ -485,6 +498,15 @@ class dml_read_slave_test extends \base_testcase {
         $this->assertEquals('test_ro_ok::test:test', $handle);
         $readsslave = $DB->perf_get_reads_slave();
         $this->assertEquals(1, $readsslave);
+
+        $debugging = array_map(function ($d) {
+            return $d->message;
+        }, $this->getDebuggingMessages());
+        $this->resetDebugging();
+        $this->assertEquals([
+            'Readonly db connection failed for host test_ro_fail: test_ro_fail',
+            'Readonly db connection succeeded for host test_ro_ok',
+        ], $debugging);
     }
 
     /**
