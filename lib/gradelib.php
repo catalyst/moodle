@@ -292,6 +292,12 @@ function grade_update($source, $courseid, $itemtype, $itemmodule, $iteminstance,
                 $dategraded, $datesubmitted, $gradegrade, $feedbackfiles, $isbulkupdate)) {
             $failed = true;
         }
+
+        // Apply penalty if updating/inserting was successful.
+        if (!$failed) {
+            $failed = !\core_grades\local\penalty\manager::apply_penalty($userid, $courseid, $itemtype, $itemmodule,
+                $iteminstance, $itemnumber);
+        }
     }
 
     if ($rs) {
