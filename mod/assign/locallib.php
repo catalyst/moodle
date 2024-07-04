@@ -800,6 +800,14 @@ class assign {
                 $update->markinganonymous = $formdata->markinganonymous;
             }
         }
+
+        // Grade penalties.
+        if (isset($formdata->gradepenalty)) {
+            $update->gradepenalty = $formdata->gradepenalty;
+        } else {
+            $update->gradepenalty = 0;
+        }
+
         $returnid = $DB->insert_record('assign', $update);
         $this->instance = $DB->get_record('assign', array('id'=>$returnid), '*', MUST_EXIST);
         // Cache the course record.
@@ -1587,6 +1595,13 @@ class assign {
         // If marking workflow is disabled, or blindmarking is disabled then make sure marking anonymous is disabled.
         if (empty($update->markingworkflow) || empty($update->blindmarking)) {
             $update->markinganonymous = 0;
+        }
+
+        // Grade penalties.
+        if (isset($formdata->gradepenalty)) {
+            $update->gradepenalty = $formdata->gradepenalty;
+        } else {
+            $update->gradepenalty = 0;
         }
 
         $result = $DB->update_record('assign', $update);
@@ -3985,6 +4000,7 @@ class assign {
             if ($attemptnumber >= 0) {
                 $grade->attemptnumber = $attemptnumber;
             }
+            $grade->penalty = 0.0;
 
             $gid = $DB->insert_record('assign_grades', $grade);
             $grade->id = $gid;
