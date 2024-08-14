@@ -1447,5 +1447,21 @@ function xmldb_main_upgrade($oldversion) {
     // Automatically generated Moodle v4.5.0 release upgrade line.
     // Put any upgrade step following this.
 
+    if ($oldversion < 2024103000.00) {
+
+        // Define field penalty to be added to grade_grades.
+        $table = new xmldb_table('grade_grades');
+        $field = new xmldb_field('deductedmark', XMLDB_TYPE_NUMBER, '10, 5', null,
+            XMLDB_NOTNULL, null, '0', 'aggregationweight');
+
+        // Conditionally launch add field penalty.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2024103000.00);
+    }
+
     return true;
 }
