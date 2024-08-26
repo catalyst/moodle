@@ -17,6 +17,9 @@
 namespace core_exemptions;
 
 use core_exemptions\local\entity\exemption;
+use core_exemptions\local\repository\exemption_repository;
+use core_exemptions\local\repository\exemption_repository_interface;
+use core_exemptions\local\service\component_exemption_service;
 use html_writer;
 
 /**
@@ -62,7 +65,7 @@ final class component_exemption_service_test extends \advanced_testcase {
      */
     protected function get_mock_repository(array $mockstore) {
         // This mock will just store data in an array.
-        $mockrepo = $this->getMockBuilder(\core_exemptions\local\repository\exemption_repository_interface::class)
+        $mockrepo = $this->getMockBuilder(exemption_repository_interface::class)
             ->onlyMethods([])
             ->getMock();
         $mockrepo->expects($this->any())
@@ -216,7 +219,7 @@ final class component_exemption_service_test extends \advanced_testcase {
 
         // Create a service for a non-existent component.
         $this->expectException('moodle_exception');
-        $service = new \core_exemptions\local\service\component_exemption_service('core_cccourse', $repo);
+        $service = new component_exemption_service('core_cccourse', $repo);
     }
 
     /**
@@ -227,7 +230,7 @@ final class component_exemption_service_test extends \advanced_testcase {
     public function test_create(): void {
         [$user1ctx, $user2ctx, $course1ctx, $course2ctx] = $this->setup_users_and_courses();
         $repo = $this->get_mock_repository([]);
-        $service = new \core_exemptions\local\service\component_exemption_service('core_course', $repo);
+        $service = new component_exemption_service('core_course', $repo);
 
         // Create an exemption for a course.
         $exem = $service->create('course', $course1ctx->instanceid, $course1ctx->id);
@@ -246,7 +249,7 @@ final class component_exemption_service_test extends \advanced_testcase {
     public function test_find(): void {
         [$user1ctx, $user2ctx, $course1ctx, $course2ctx] = $this->setup_users_and_courses();
         $repo = $this->get_mock_repository([]);
-        $service = new \core_exemptions\local\service\component_exemption_service('core_course', $repo);
+        $service = new component_exemption_service('core_course', $repo);
 
         // Create a couple of exemptions.
         $exem1 = $service->create('course', $course1ctx->instanceid, $course1ctx->id);
@@ -265,7 +268,7 @@ final class component_exemption_service_test extends \advanced_testcase {
     public function test_findby(): void {
         [$user1ctx, $user2ctx, $course1ctx, $course2ctx] = $this->setup_users_and_courses();
         $repo = $this->get_mock_repository([]);
-        $service = new \core_exemptions\local\service\component_exemption_service('core_course', $repo);
+        $service = new component_exemption_service('core_course', $repo);
 
         // Create a couple of exemptions.
         $exem1 = $service->create('course', $course1ctx->instanceid, $course1ctx->id);
@@ -294,7 +297,7 @@ final class component_exemption_service_test extends \advanced_testcase {
     public function test_update(): void {
         [$user1ctx, $user2ctx, $course1ctx, $course2ctx] = $this->setup_users_and_courses();
         $repo = $this->get_mock_repository([]);
-        $service = new \core_exemptions\local\service\component_exemption_service('core_course', $repo);
+        $service = new component_exemption_service('core_course', $repo);
         $reason = 'Exemption granted by royal decree';
         $format = FORMAT_PLAIN;
 
@@ -323,7 +326,7 @@ final class component_exemption_service_test extends \advanced_testcase {
     public function test_delete(): void {
         [$user1ctx, $user2ctx, $course1ctx, $course2ctx] = $this->setup_users_and_courses();
         $repo = $this->get_mock_repository([]);
-        $service = new \core_exemptions\local\service\component_exemption_service('core_course', $repo);
+        $service = new component_exemption_service('core_course', $repo);
 
         $itemtype = 'course';
         $itemid = $course1ctx->instanceid;
@@ -381,7 +384,7 @@ final class component_exemption_service_test extends \advanced_testcase {
     public function test_exists(): void {
         [$user1ctx, $user2ctx, $course1ctx, $course2ctx] = $this->setup_users_and_courses();
         $repo = $this->get_mock_repository([]);
-        $service = new \core_exemptions\local\service\component_exemption_service('core_course', $repo);
+        $service = new component_exemption_service('core_course', $repo);
 
         $itemtype = 'course';
         $itemid = $course1ctx->instanceid;
@@ -400,7 +403,7 @@ final class component_exemption_service_test extends \advanced_testcase {
     public function test_count_by(): void {
         [$user1ctx, $user2ctx, $course1ctx, $course2ctx] = $this->setup_users_and_courses();
         $repo = $this->get_mock_repository([]);
-        $service = new \core_exemptions\local\service\component_exemption_service('core_course', $repo);
+        $service = new component_exemption_service('core_course', $repo);
 
         $itemtype = 'course';
         $itemid = $course1ctx->instanceid;
@@ -422,8 +425,8 @@ final class component_exemption_service_test extends \advanced_testcase {
 
         // Get a component_exemption_service for the user.
         // We need to use a real (DB) repository, as we want to run the SQL.
-        $repo = new \core_exemptions\local\repository\exemption_repository();
-        $service = new \core_exemptions\local\service\component_exemption_service('core_course', $repo);
+        $repo = new exemption_repository();
+        $service = new component_exemption_service('core_course', $repo);
 
         // Exempt the first course only.
         $service->create('course', $course1ctx->instanceid, $course1ctx->id);

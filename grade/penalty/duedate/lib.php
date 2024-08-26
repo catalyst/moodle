@@ -37,6 +37,10 @@ function gradepenalty_duedate_extend_navigation_course(navigation_node $navigati
         $url = new url('/grade/penalty/duedate/manage_penalty_rule.php', ['contextid' => $context->id]);
         $name = get_string('penaltyrule', 'gradepenalty_duedate');
         $navigation->add($name, $url, navigation_node::TYPE_SETTING, null, null, new pix_icon('i/settings', ''));
+
+        $name = get_string('manage_exemptions', 'gradepenalty_duedate');
+        $url = new url('/grade/penalty/duedate/manage_exemptions.php', ['contextid' => $context->id]);
+        $navigation->add($name, $url, navigation_node::TYPE_SETTING, null, null, new pix_icon('i/settings', ''));
     }
 }
 
@@ -52,6 +56,10 @@ function gradepenalty_duedate_extend_navigation_module(navigation_node $navigati
     if (has_capability('gradepenalty/duedate:manage', $context)) {
         $url = new url('/grade/penalty/duedate/manage_penalty_rule.php', ['contextid' => $context->id]);
         $name = get_string('penaltyrule', 'gradepenalty_duedate');
+        $navigation->add($name, $url, navigation_node::TYPE_SETTING, null, null, new pix_icon('i/settings', ''));
+
+        $name = get_string('manage_exemptions', 'gradepenalty_duedate');
+        $url = new url('/grade/penalty/duedate/manage_exemptions.php', ['contextid' => $context->id]);
         $navigation->add($name, $url, navigation_node::TYPE_SETTING, null, null, new pix_icon('i/settings', ''));
     }
 }

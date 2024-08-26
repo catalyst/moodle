@@ -36,10 +36,17 @@ class penalty_calculator extends \core_grades\penalty_calculator {
      * @param penalty_container $container The penalty container.
      */
     public static function calculate_penalty(penalty_container $container): void {
-        // Calculate the deducted grade based on the max grade.
+        // Get the course module.
         $gradeitem = $container->get_grade_item();
         $modinfo = get_fast_modinfo($gradeitem->courseid);
         $cm = $modinfo->instances[$gradeitem->itemmodule][$gradeitem->iteminstance];
+
+        // Skip penalty application if the user has an exemption.
+        if (exemption_helper::is_exempt($container->get_userid(), context_module::instance($cm->id)->id)) {
+            return;
+        }
+
+        // Calculate the deducted grade based on the max grade.
         $deductedpercentage = self::get_penalty_from_rules($cm, $container->get_submission_date(), $container->get_due_date());
         $deductedgrade = $container->get_max_grade() * $deductedpercentage / 100;
         $container->aggregate_penalty($deductedgrade);
