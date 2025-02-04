@@ -139,10 +139,25 @@ class get_groups_for_selector extends external_api {
                     $picture = $OUTPUT->image_url('g/g1');
                 }
 
+                // Get the groupings the group belongs to.
+                $groupings = groups_get_groupings_by_group($group->id);
+
+                // Add all participant string and image url to groupings array.
+                $groupings = array_map(function($grouping) {
+                    global $OUTPUT;
+                    return (object) [
+                        'id' => $grouping->id,
+                        'name' => $grouping->name,
+                        'allparticipantstext' => get_string('allparticipants_grouping', 'core', $grouping->name),
+                        'groupingimageurl' => $OUTPUT->image_url('g/g1')->out(false),
+                    ];
+                }, $groupings);
+
                 return (object) [
                     'id' => $group->id,
                     'name' => format_string($group->name, true, ['context' => $context]),
                     'groupimageurl' => $picture->out(false),
+                    'groupings' => $groupings,
                 ];
             }, $groupsmenu);
         }
@@ -175,6 +190,12 @@ class get_groups_for_selector extends external_api {
             'id' => new external_value(PARAM_ALPHANUM, 'An ID for the group', VALUE_REQUIRED),
             'name' => new external_value(PARAM_TEXT, 'The full name of the group', VALUE_REQUIRED),
             'groupimageurl' => new external_value(PARAM_URL, 'Group image URL', VALUE_OPTIONAL),
+            'groupings' => new external_multiple_structure( new external_single_structure([
+                'id' => new external_value(PARAM_INT, 'Grouping ID', VALUE_REQUIRED),
+                'name' => new external_value(PARAM_TEXT, 'Grouping name', VALUE_REQUIRED),
+                'allparticipantstext' => new external_value(PARAM_TEXT, 'All participants string', VALUE_REQUIRED),
+                'groupingimageurl' => new external_value(PARAM_URL, 'Grouping image URL', VALUE_REQUIRED),
+            ])),
         ];
         return new external_single_structure($groupfields);
     }

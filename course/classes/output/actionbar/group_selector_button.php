@@ -43,7 +43,8 @@ class group_selector_button implements renderable, named_templatable {
     public function __construct(
         protected context $context,
         protected int|bool $activegroup,
-        protected string $label
+        protected string $label,
+        protected int $activegrouping,
     ) {
     }
 
@@ -57,7 +58,12 @@ class group_selector_button implements renderable, named_templatable {
             $group = groups_get_group($this->activegroup);
             $context['selectedgroup'] = format_string($group->name, true, ['context' => $this->context->get_course_context()]);
         } else if ($this->activegroup === 0) {
-            $context['selectedgroup'] = get_string('allparticipants');
+            if ($this->activegrouping > 0) {
+                $grouping = groups_get_grouping($this->activegrouping);
+                $context['selectedgroup'] = get_string('allparticipants_grouping', 'core', $grouping->name);
+            } else {
+                $context['selectedgroup'] = get_string('allparticipants');
+            }
         }
 
         return $context;

@@ -42,6 +42,8 @@ export default class GroupSearch extends search_combobox {
         this.selectors = {...this.selectors,
             courseid: '[data-region="courseid"]',
             placeholder: '.groupsearchdropdown [data-region="searchplaceholder"]',
+            togglegroupingbutton: '[data-action="togglegrouping"]',
+            togglegroupingtarget: '.toggle-grouping-target',
         };
         const component = document.querySelector(this.componentSelector());
         this.courseID = component.querySelector(this.selectors.courseid).dataset.courseid;
@@ -114,9 +116,59 @@ export default class GroupSearch extends search_combobox {
      * Build the content then replace the node.
      */
     async renderDropdown() {
+        let groups = this.getMatchedResults();
+
+        // Go through the groups and organise them by groupings.
+        let groupings = [];
+
+        // Groups without groupings.
+        let groupWithoutGrouping = [];
+
+        groups.forEach((group) => {
+            // If the group has no groupings, add it to the group without grouping list.
+            if (group.groupings.length === 0) {
+                groupWithoutGrouping.push(group);
+                return;
+            }
+
+            // Otherwise, add it to the list of groups with grouping.
+            group.groupings.forEach((grouping) => {
+                if (!groupings[grouping.id]) {
+                    groupings[grouping.id] = {
+                        id: grouping.id,
+                        name: grouping.name,
+                        allparticipantstext: grouping.allparticipantstext,
+                        groupingimageurl: grouping.groupingimageurl,
+                        groupingid: grouping.id,
+                        groups: [],
+                    };
+                }
+                groupings[grouping.id].groups.push(group);
+            });
+        });
+
+        // Add "All participants in grouping" option to each grouping.
+        // Only add this option if the search term is empty.
+        if (this.getSearchTerm() === '') {
+            groupings.forEach((grouping) => {
+                grouping.groups.unshift({
+                    // Use negative grouping id to avoid conflicts with real group ids.
+                    id: -grouping.id,
+                    name: grouping.allparticipantstext,
+                    groupimageurl: grouping.groupingimageurl,
+                    groupingid: grouping.id,
+                });
+            });
+        }
+
+        // We used grouping id as the key, the array will have undefined values.
+        // Hence, we replace the keys here.
+        groupings = groupings.filter((grouping) => grouping !== undefined);
+
         const {html, js} = await renderForPromise('core_group/comboboxsearch/resultset', {
-            groups: this.getMatchedResults(),
-            hasresults: this.getMatchedResults().length > 0,
+            groupings: groupings,
+            groupwithoutgrouping: groupWithoutGrouping,
+            hasresults: groups.length > 0,
             instance: this.instance,
             searchterm: this.getSearchTerm(),
         });
@@ -175,6 +227,7 @@ export default class GroupSearch extends search_combobox {
                     id: group.id,
                     name: group.name,
                     groupimageurl: group.groupimageurl,
+                    groupings: group.groupings,
                 };
             })
         );
@@ -186,6 +239,48 @@ export default class GroupSearch extends search_combobox {
      * @param {MouseEvent} e The triggering event that we are working with.
      */
     async clickHandler(e) {
+        // Toggle a grouping.
+        if (e.target.closest(this.selectors.togglegroupingbutton)) {
+            e.stopPropagation();
+
+            // Toggle button.
+            let toggleButton = e.target.closest(this.selectors.togglegroupingbutton);
+
+            // Find the target which we want to hide or show.
+            let toggleTarget = document.querySelector(toggleButton.dataset.target);
+
+            // Toggle show class.
+            toggleTarget.classList.toggle('show');
+
+            // Scroll to the top of the grouping.
+            toggleTarget.scrollIntoView(false);
+
+            // Hide all other groupings.
+            document.querySelectorAll(this.selectors.togglegroupingtarget).forEach((target) => {
+                if (target !== toggleTarget) {
+                    target.classList.remove('show');
+                }
+            });
+
+            // Toggle the aria-expanded attribute.
+            toggleButton.setAttribute('aria-expanded', toggleButton.getAttribute('aria-expanded') === 'true' ? 'false' : 'true');
+
+            return;
+        }
+
+        // Check if "All participants" option is selected.
+        if (e.target.closest(this.selectors.resultitems)) {
+            let groupID = e.target.closest(this.selectors.resultitems).dataset.value;
+            if (groupID <= 0) {
+                // The groupID is the negative value of grouping id.
+                let groupingID = -groupID;
+                groupID = 0;
+                window.location = this.selectOneLink(groupID, groupingID);
+                e.stopPropagation();
+            }
+            return;
+        }
+
         if (e.target.closest(this.selectors.clearSearch)) {
             e.stopPropagation();
             // Clear the entered search query in the search bar.
@@ -232,8 +327,9 @@ export default class GroupSearch extends search_combobox {
      * We will call this function when a user interacts with the combobox to redirect them to show their results in the page.
      *
      * @param {Number} groupID The ID of the group selected.
+     * @param {Number} groupingID The ID of the grouping selected.
      */
-    selectOneLink(groupID) {
-        throw new Error(`selectOneLink(${groupID}) must be implemented in ${this.constructor.name}`);
+    selectOneLink(groupID, groupingID = 0) {
+        throw new Error(`selectOneLink(${groupID}, ${groupingID}) must be implemented in ${this.constructor.name}`);
     }
 }

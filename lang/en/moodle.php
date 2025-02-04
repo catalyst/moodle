@@ -147,6 +147,7 @@ $string['allowstealthmodules_help'] = 'If enabled, activities can be made availa
 $string['allownone'] = 'Allow none';
 $string['allownot'] = 'Do not allow';
 $string['allparticipants'] = 'All participants';
+$string['allparticipants_grouping'] = 'All participants in {$a}';
 $string['allteachers'] = 'All teachers';
 $string['alphanumerical'] = 'Can only contain alphanumeric characters, hyphen (-) or period (.)';
 $string['alreadyconfirmed'] = 'Registration has already been confirmed';

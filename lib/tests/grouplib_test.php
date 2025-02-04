@@ -2304,24 +2304,15 @@ final class grouplib_test extends \advanced_testcase {
     }
 
     /**
-     * Only groups with participation == true should be returned for an activity.
+     * Create course with groups and a grouping.
      *
-     * @covers \groups_get_activity_allowed_groups()
-     * @return void
-     * @throws \coding_exception
+     * @return array
      */
-    public function test_groups_get_activity_allowed_groups(): void {
-        $this->resetAfterTest(true);
+    private function create_course_with_groups(): array {
         $generator = $this->getDataGenerator();
 
-        // Create courses.
+        // Create course.
         $course = $generator->create_course();
-
-        // Create user.
-        $user = $generator->create_user();
-
-        // Enrol user.
-        $generator->enrol_user($user->id, $course->id);
 
         // Create groups.
         $groups = [
@@ -2339,26 +2330,126 @@ final class grouplib_test extends \advanced_testcase {
             ]),
             'own' => $generator->create_group(['courseid' => $course->id, 'visibility' => GROUPS_VISIBILITY_OWN]),
             'none' => $generator->create_group(['courseid' => $course->id, 'visibility' => GROUPS_VISIBILITY_NONE]),
+            'grouping_group_all' => $generator->create_group([
+                'courseid' => $course->id,
+                'visibility' => GROUPS_VISIBILITY_ALL,
+            ]),
+            'grouping_group_all-n' => $generator->create_group([
+                'courseid' => $course->id,
+                'visibility' => GROUPS_VISIBILITY_ALL,
+                'participation' => false
+            ]),
+            'grouping_group_members' => $generator->create_group([
+                'courseid' => $course->id,
+                'visibility' => GROUPS_VISIBILITY_MEMBERS,
+            ]),
+            'grouping_group_members-n' => $generator->create_group([
+                'courseid' => $course->id,
+                'visibility' => GROUPS_VISIBILITY_MEMBERS,
+                'participation' => false
+            ]),
+            'grouping_group_own' => $generator->create_group([
+                'courseid' => $course->id,
+                'visibility' => GROUPS_VISIBILITY_OWN,
+            ]),
+            'grouping_group_none' => $generator->create_group([
+                'courseid' => $course->id,
+                'visibility' => GROUPS_VISIBILITY_NONE,
+            ]),
+
         ];
+
+        // Create grouping and assign members.
+        $grouping = $generator->create_grouping(['courseid' => $course->id, 'name' => 'Grouping 1']);
+        groups_assign_grouping($grouping->id, $groups['grouping_group_all']->id);
+        groups_assign_grouping($grouping->id, $groups['grouping_group_all-n']->id);
+        groups_assign_grouping($grouping->id, $groups['grouping_group_members']->id);
+        groups_assign_grouping($grouping->id, $groups['grouping_group_members-n']->id);
+        groups_assign_grouping($grouping->id, $groups['grouping_group_own']->id);
+        groups_assign_grouping($grouping->id, $groups['grouping_group_none']->id);
+
+        return [$course, $groups, $grouping];
+    }
+
+    /**
+     * Only groups with participation == true should be returned for an activity.
+     *
+     * @covers \groups_get_activity_allowed_groups()
+     * @return void
+     * @throws \coding_exception
+     */
+    public function test_groups_get_activity_allowed_groups(): void {
+        $this->resetAfterTest();
+        $generator = $this->getDataGenerator();
+
+        // Create course and groups.
+        [$course, $groups, $grouping] = $this->create_course_with_groups();
+
+        // Create user.
+        $user = $generator->create_user();
+
+        // Enrol user.
+        $generator->enrol_user($user->id, $course->id);
+
         // Add user to all groups.
-        $generator->create_group_member(['groupid' => $groups['all-p']->id, 'userid' => $user->id]);
-        $generator->create_group_member(['groupid' => $groups['members-p']->id, 'userid' => $user->id]);
-        $generator->create_group_member(['groupid' => $groups['all-n']->id, 'userid' => $user->id]);
-        $generator->create_group_member(['groupid' => $groups['members-n']->id, 'userid' => $user->id]);
-        $generator->create_group_member(['groupid' => $groups['own']->id, 'userid' => $user->id]);
-        $generator->create_group_member(['groupid' => $groups['none']->id, 'userid' => $user->id]);
+        foreach ($groups as $group) {
+            $generator->create_group_member(['groupid' => $group->id, 'userid' => $user->id]);
+        }
 
         $module = $generator->create_module('forum', ['course' => $course->id]);
         $cm = get_fast_modinfo($course)->get_cm($module->cmid);
 
+        // Without grouping param.
         $activitygroups = groups_get_activity_allowed_groups($cm, $user->id);
-
+        $this->assertEquals(4, count($activitygroups));
         $this->assertContains((int)$groups['all-p']->id, array_keys($activitygroups));
         $this->assertContains((int)$groups['members-p']->id, array_keys($activitygroups));
-        $this->assertNotContains((int)$groups['all-n']->id, array_keys($activitygroups));
-        $this->assertNotContains((int)$groups['members-n']->id, array_keys($activitygroups));
-        $this->assertNotContains((int)$groups['own']->id, array_keys($activitygroups));
-        $this->assertNotContains((int)$groups['none']->id, array_keys($activitygroups));
+        $this->assertContains((int)$groups['grouping_group_all']->id, array_keys($activitygroups));
+        $this->assertContains((int)$groups['grouping_group_members']->id, array_keys($activitygroups));
 
+        // With grouping param.
+        $activitygroups = groups_get_activity_allowed_groups($cm, $user->id, $grouping->id);
+        $this->assertEquals(2, count($activitygroups));
+        $this->assertContains((int)$groups['grouping_group_all']->id, array_keys($activitygroups));
+        $this->assertContains((int)$groups['grouping_group_members']->id, array_keys($activitygroups));
+    }
+
+    /**
+     * Only groups with participation == true should be returned for a course.
+     *
+     * @covers \groups_get_course_allowed_groups()
+     * @return void
+     */
+    public function test_groups_get_course_allowed_groups(): void {
+        $this->resetAfterTest();
+        $generator = $this->getDataGenerator();
+
+        // Create course and groups.
+        [$course, $groups, $grouping] = $this->create_course_with_groups();
+
+        // Create user.
+        $user = $generator->create_user();
+
+        // Enrol user.
+        $generator->enrol_user($user->id, $course->id);
+
+        // Add user to all groups.
+        foreach ($groups as $group) {
+            $generator->create_group_member(['groupid' => $group->id, 'userid' => $user->id]);
+        }
+
+        // Without grouping param.
+        $coursegroups = groups_get_course_allowed_groups($course, $user->id);
+        $this->assertEquals(4, count($coursegroups));
+        $this->assertContains((int)$groups['all-p']->id, array_keys($coursegroups));
+        $this->assertContains((int)$groups['members-p']->id, array_keys($coursegroups));
+        $this->assertContains((int)$groups['grouping_group_all']->id, array_keys($coursegroups));
+        $this->assertContains((int)$groups['grouping_group_members']->id, array_keys($coursegroups));
+
+        // With grouping param.
+        $coursegroups = groups_get_course_allowed_groups($course, $user->id, $grouping->id);
+        $this->assertEquals(2, count($coursegroups));
+        $this->assertContains((int)$groups['grouping_group_all']->id, array_keys($coursegroups));
+        $this->assertContains((int)$groups['grouping_group_members']->id, array_keys($coursegroups));
     }
 }

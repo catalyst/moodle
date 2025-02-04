@@ -108,9 +108,6 @@ class assign_grading_table extends table_sql implements renderable {
         $url = new moodle_url($CFG->wwwroot . '/mod/assign/view.php', $urlparams);
         $this->define_baseurl($url);
 
-        // Do some business - then set the sql.
-        $currentgroup = groups_get_activity_group($assignment->get_course_module(), true);
-
         if ($rowoffset) {
             $this->rownum = $rowoffset - 1;
         }
@@ -121,7 +118,7 @@ class assign_grading_table extends table_sql implements renderable {
         // string with the full name of the selected user.
         $usersearch = $userid ? fullname(\core_user::get_user($userid)) : optional_param('search', '', PARAM_NOTAGS);
         $assignment->set_usersearch($userid, $groupid, $usersearch);
-        $users = array_keys( $assignment->list_participants($currentgroup, true));
+        $users = $assignment->list_grouping_participants();
         if (count($users) == 0) {
             // Insert a record that will never match to the sql is still valid.
             $users[] = -1;

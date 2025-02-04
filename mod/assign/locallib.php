@@ -4620,8 +4620,8 @@ class assign {
             $SESSION->mod_assign_useridlist[$this->get_useridlist_key()] = $useridlist;
         }
 
-        $currentgroup = groups_get_activity_group($this->get_course_module(), true);
-        $users = array_keys($this->list_participants($currentgroup, true));
+        $users = $this->list_grouping_participants();
+
         if (count($users) != 0 && $this->can_grade()) {
             $jsparams = [];
             $jsparams['message'] = !empty($CFG->messaging)
@@ -4659,6 +4659,33 @@ class assign {
         }
 
         return $o;
+    }
+
+    /**
+     * List participants in a groupings, optional filter by a group.
+     *
+     * @param int $idsonly If true, return only user ids, otherwise return full user records.
+     * @param bool $tablesort If true, sort the table
+     */
+    public function list_grouping_participants($idsonly = true, $tablesort = false) {
+        global $USER;
+
+        $currentgroup = groups_get_activity_group($this->get_course_module(), true);
+        $currentgrouping = groups_get_activity_grouping($this->get_course_module());
+
+        if ($currentgroup == 0 && ($currentgrouping > 0)) {
+            // Find all groups in the grouping.
+            $groups = groups_get_activity_allowed_groups($this->get_course_module(), $USER->id, $currentgrouping);
+
+            // Get users from all groups in the grouping.
+            $users = [];
+            foreach ($groups as $group) {
+                $users = array_merge($users, array_keys($this->list_participants($group->id, $idsonly, $tablesort)));
+            }
+        } else {
+            $users = array_keys($this->list_participants($currentgroup, $idsonly, $tablesort));
+        }
+        return $users;
     }
 
     /**

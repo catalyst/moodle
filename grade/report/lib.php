@@ -433,6 +433,8 @@ abstract class grade_report {
      * Sets up this object's group variables, mainly to restrict the selection of users to display.
      */
     protected function setup_groups() {
+        global $DB;
+
         // find out current groups mode
         if ($this->groupmode = groups_get_course_groupmode($this->course)) {
             if (empty($this->gpr->groupid)) {
@@ -452,6 +454,15 @@ abstract class grade_report {
                 $this->groupsql             = " JOIN {groups_members} gm ON gm.userid = u.id ";
                 $this->groupwheresql        = " AND gm.groupid = :gr_grpid ";
                 $this->groupwheresql_params = array('gr_grpid'=>$this->currentgroup);
+            } else {
+                $currentgrouping = groups_get_course_grouping($this->course);
+                if ($currentgrouping) {
+                    $allowedgroups = groups_get_course_allowed_groups($this->course, null, $currentgrouping);
+                    [$insql, $inparams] = $DB->get_in_or_equal(array_keys($allowedgroups), SQL_PARAMS_NAMED, 'gr_grpid');
+                    $this->groupsql             = " JOIN {groups_members} gm ON gm.userid = u.id ";
+                    $this->groupwheresql        = " AND gm.groupid $insql ";
+                    $this->groupwheresql_params = $inparams;
+                }
             }
         }
     }

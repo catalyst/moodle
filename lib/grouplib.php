@@ -1066,6 +1066,22 @@ function groups_get_course_group($course, $update=false, $allowedgroups=null) {
 }
 
 /**
+ * Get course grouping id.
+ *
+ * @param stdClass $course course object
+ *
+ */
+function groups_get_course_grouping($course) {
+    if (!groups_get_course_groupmode($course)) {
+        return 0;
+    }
+
+    $activegrouping = optional_param('grouping', 0, PARAM_INT);
+
+    return $activegrouping;
+}
+
+/**
  * Returns group active in activity, changes the group by default if 'group' page param present
  *
  * @category group
@@ -1118,33 +1134,81 @@ function groups_get_activity_group($cm, $update=false, $allowedgroups=null) {
 }
 
 /**
+ * Get activity grouping id.
+ *
+ * @param stdClass|cm_info $cm course module object
+ */
+function groups_get_activity_grouping($cm) {
+    global $SESSION;
+
+    if (!groups_get_activity_groupmode($cm)) {
+        return 0;
+    }
+
+    $activegrouping = optional_param('grouping', 0, PARAM_INT);
+
+    return $activegrouping;
+}
+
+/**
+ * Get course allowed groups.
+ *
+ * @param stdClass $course course object
+ * @param int $userid user id
+ * @param int $groupingid grouping id
+ */
+function groups_get_course_allowed_groups($course, $userid = 0, $groupingid = 0) {
+    // Use current user by default.
+    global $USER;
+
+    if (!$userid) {
+        $userid = $USER->id;
+    }
+
+    // Group mode for course.
+    $groupmode = groups_get_course_groupmode($course);
+
+    $context = context_course::instance($course->id);
+    if ($groupmode == VISIBLEGROUPS || has_capability('moodle/site:accessallgroups', $context, $userid)) {
+        // User has access to all groups.
+        $userid = 0;
+    }
+
+    return groups_get_all_groups($course->id, $userid, $groupingid, 'g.*', false, true);
+}
+
+/**
  * Gets a list of groups that the user is allowed to access within the
  * specified activity.
  *
  * @category group
  * @param stdClass|cm_info $cm Course-module
  * @param int $userid User ID (defaults to current user)
+ * @param int $groupingid Grouping ID (defaults to 0)
  * @return array An array of group objects, or false if none
  */
-function groups_get_activity_allowed_groups($cm,$userid=0) {
+function groups_get_activity_allowed_groups($cm, $userid = 0, $groupingid = 0) {
     // Use current user by default
     global $USER;
-    if(!$userid) {
-        $userid=$USER->id;
+    if (!$userid) {
+        $userid = $USER->id;
     }
 
     // Get groupmode for activity, taking into account course settings
-    $groupmode=groups_get_activity_groupmode($cm);
+    $groupmode = groups_get_activity_groupmode($cm);
 
     // If visible groups mode, or user has the accessallgroups capability,
     // then they can access all groups for the activity...
     $context = context_module::instance($cm->id);
-    if ($groupmode == VISIBLEGROUPS or has_capability('moodle/site:accessallgroups', $context, $userid)) {
-        return groups_get_all_groups($cm->course, 0, $cm->groupingid, 'g.*', false, true);
-    } else {
-        // ...otherwise they can only access groups they belong to
-        return groups_get_all_groups($cm->course, $userid, $cm->groupingid, 'g.*', false, true);
+    if ($groupmode == VISIBLEGROUPS || has_capability('moodle/site:accessallgroups', $context, $userid)) {
+        // User has access to all groups.
+        $userid = 0;
     }
+
+    // If grouping is specified, then we get all groups for the grouping.
+    $groupingid = $groupingid > 0 ? $groupingid : $cm->groupingid;
+
+    return groups_get_all_groups($cm->course, $userid, $groupingid, 'g.*', false, true);
 }
 
 /**
@@ -1652,4 +1716,21 @@ function groups_get_activity_shared_group_members($cm, $userid = null) {
         return [];
     }
     return groups_get_groups_members($groupsids);
+}
+
+/**
+ * Return groupings which a group belongs to.
+ *
+ * @param int $groupid The group id.
+ * @return array list of groupings the group belongs to.
+ */
+function groups_get_groupings_by_group(int $groupid): array {
+    global $DB;
+
+    $sql = "SELECT g.id, g.name
+              FROM {groupings_groups} gg
+              JOIN {groupings} g ON gg.groupingid = g.id
+             WHERE gg.groupid = :groupid";
+
+    return $DB->get_records_sql($sql, ['groupid' => $groupid]);
 }

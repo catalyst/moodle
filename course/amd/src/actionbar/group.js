@@ -52,13 +52,16 @@ export default class Group extends GroupSearch {
      * Build up the link that is dedicated to a particular result.
      *
      * @param {Number} groupID The ID of the group selected.
+     * @param {Number} groupingID The ID of the grouping selected.
      * @returns {string}
      */
-    selectOneLink(groupID) {
+    selectOneLink(groupID, groupingID = 0) {
         const url = new URL(this.baseUrl);
         url.searchParams.set('groupsearchvalue', this.getSearchTerm());
         url.searchParams.set('group', groupID);
-
+        if (groupingID) {
+            url.searchParams.set('grouping', groupingID);
+        }
         return url.toString();
     }
 }

@@ -31,6 +31,9 @@ class group_selector extends comboboxsearch {
     /** @var int|bool the active group, false if groups not used. */
     private int|bool $activegroup;
 
+    /** @var int the active grouping. */
+    private int $activegrouping;
+
     /**
      * The class constructor.
      *
@@ -38,6 +41,7 @@ class group_selector extends comboboxsearch {
      */
     public function __construct(private stdClass $context) {
         $this->activegroup = $this->get_active_group();
+        $this->activegrouping = $this->get_active_grouping();
         $this->label = $this->get_label();
 
         // The second and third arguments (buttoncontent and dropdowncontent) need to be rendered here, since the comboboxsearch
@@ -57,7 +61,8 @@ class group_selector extends comboboxsearch {
      */
     private function get_button_content(): string {
         global $PAGE;
-        $groupsselectorbutton = new group_selector_button($this->context, $this->activegroup, $this->label);
+        $groupsselectorbutton = new group_selector_button($this->context, $this->activegroup, $this->label,
+            $this->activegrouping);
 
         return $PAGE->get_renderer('core', 'course')->render($groupsselectorbutton);
     }
@@ -118,6 +123,24 @@ class group_selector extends comboboxsearch {
             return groups_get_activity_group($cm, true, $allowedgroups);
         }
         return groups_get_course_group($course, true, $allowedgroups);
+    }
+
+    /**
+     * Returns the active grouping ID based on the context level.
+     *
+     * @return int The active grouping ID
+     */
+    private function get_active_grouping(): int {
+        // Activity grouping.
+        if ($this->context->contextlevel == CONTEXT_MODULE) {
+            $cm = get_coursemodule_from_id(false, $this->context->instanceid);
+            return groups_get_activity_grouping($cm);
+        } else if ($this->context->contextlevel == CONTEXT_COURSE) {
+            $course = get_course($this->context->instanceid);
+            return groups_get_course_grouping($course);
+        } else {
+            return 0;
+        }
     }
 
     /**
