@@ -1579,10 +1579,13 @@ class assign {
         if (empty($update->markingworkflow)) { // If marking workflow is disabled, make sure allocation is disabled.
             $update->markingallocation = 0;
         }
-        $update->markinganonymous = $formdata->markinganonymous;
-        // If marking workflow is disabled, or blindmarking is disabled then make sure marking anonymous is disabled.
-        if (empty($update->markingworkflow) || empty($update->blindmarking)) {
-            $update->markinganonymous = 0;
+        if (isset($formdata->markinganonymous)) {
+            // If marking workflow is disabled, or blindmarking is disabled then make sure marking anonymous is disabled.
+            if (empty($update->markingworkflow) || empty($update->blindmarking)) {
+                $update->markinganonymous = 0;
+            } else {
+                $update->markinganonymous = $formdata->markinganonymous;
+            }
         }
 
         $result = $DB->update_record('assign', $update);
