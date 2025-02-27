@@ -212,8 +212,6 @@ final class penalty_test extends \advanced_testcase {
         apply_grade_penalty_to_user($this->user->id, $this->gradeitem, $submissiondate, $duedate);
         $this->assertEquals($finalgrade, $this->get_final_grade());
 
-        // Enable penalty. But the assign module is not supported/enabled.
-        set_config('gradepenalty_enabled', 1);
         apply_grade_penalty_to_user($this->user->id, $this->gradeitem, $submissiondate, $duedate);
         $this->assertEquals($finalgrade, $this->get_final_grade());
 
@@ -261,7 +259,6 @@ final class penalty_test extends \advanced_testcase {
         $this->resetAfterTest();
         $this->setup_test();
         // Enable grade penalty.
-        set_config('gradepenalty_enabled', 1);
         set_config('gradepenalty_supportedplugins', 'quiz,assign');
         foreach (['test_plugin1', 'test_plugin2', 'test_plugin3'] as $plugin) {
             \core\plugininfo\gradepenalty::enable_plugin($plugin, true);
@@ -284,7 +281,6 @@ final class penalty_test extends \advanced_testcase {
         $this->setup_test();
 
         // Enable grade penalty.
-        set_config('gradepenalty_enabled', 1);
         set_config('gradepenalty_supportedplugins', 'quiz,assign');
         foreach (['test_plugin1', 'test_plugin2', 'test_plugin3'] as $plugin) {
             \core\plugininfo\gradepenalty::enable_plugin($plugin, true);

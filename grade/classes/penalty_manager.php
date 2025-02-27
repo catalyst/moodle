@@ -48,26 +48,12 @@ class penalty_manager {
     }
 
     /**
-     * Whether penalty feature is enabled.
-     *
-     * @return bool if penalty is enabled
-     */
-    public static function is_penalty_enabled(): bool {
-        return (bool) get_config('core', 'gradepenalty_enabled');
-    }
-
-    /**
      * Whether penalty is enabled for a module.
      *
      * @param string $module the module name.
      * @return bool if penalty is enabled for the module.
      */
     public static function is_penalty_enabled_for_module(string $module): bool {
-        // Return false if the penalty feature is disabled.
-        if (!self::is_penalty_enabled()) {
-            return false;
-        }
-
         // Check if the module is in the enable list.
         $supportedmodules = get_config('core', 'gradepenalty_supportedplugins');
         if (!in_array($module, explode(',', $supportedmodules))) {

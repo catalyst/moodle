@@ -34,11 +34,6 @@ class helper {
      * @param int $assignid The assignment id.
      */
     public static function is_penalty_enabled(int $assignid): bool {
-        // Check if the penalty feature is enabled.
-        if (!\core_grades\penalty_manager::is_penalty_enabled()) {
-            return false;
-        }
-
         // Get the assignment course module.
         $cm = get_coursemodule_from_instance('assign', $assignid);
         $context = context_module::instance($cm->id);
