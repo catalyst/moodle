@@ -90,7 +90,6 @@ final class hook_listener_test extends penalty_testcase {
         $this->create_sample_rules();
 
         // Enable grade penalty.
-        set_config('gradepenalty_enabled', 1);
         set_config('gradepenalty_supportedplugins', 'quiz,assign');
         gradepenalty::enable_plugin('duedate', true);
 
