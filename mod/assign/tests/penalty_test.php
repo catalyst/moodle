@@ -55,8 +55,6 @@ final class penalty_test extends \advanced_testcase {
             ]),
         );
 
-        // Enable penalty feature.
-        set_config('gradepenalty_enabled', 1);
         set_config('gradepenalty_supportedplugins', 'assign');
         \core\plugininfo\gradepenalty::enable_plugin('fake_deduction', true);
 
@@ -76,9 +74,6 @@ final class penalty_test extends \advanced_testcase {
     public function test_penalty_support(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
-
-        // Enable penalty feature.
-        set_config('gradepenalty_enabled', 1);
 
         // Assign should be in the supported list.
         $this->assertTrue(in_array('assign', penalty_manager::get_supported_modules()));
