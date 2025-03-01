@@ -850,25 +850,6 @@ function grade_format_gradevalue(?float $value, &$grade_item, $localized=true, $
 }
 
 /**
- * Show if penalty is applied to the grade
- *
- * @param grade_grade $grade Grade object
- * @return string HTML code for penalty indicator
- */
-function show_penalty_indicator(grade_grade $grade): string {
-    global $PAGE;
-
-    // Show penalty indicator if penalty is greater than 0.
-    if ($grade->is_penalty_applied_to_final_grade()) {
-        $indicator = new \core_grades\output\penalty_indicator(2, $grade);
-        $renderer = $PAGE->get_renderer('core_grades');
-        return $renderer->render_penalty_indicator($indicator);
-    }
-
-    return '';
-}
-
-/**
  * Returns a float representation of a grade value
  *
  * @param float|null $value The grade value
@@ -1688,34 +1669,4 @@ function grade_get_date_for_user_grade(\stdClass $grade, \stdClass $user): ?int 
     } else {
         return $grade->datesubmitted;
     }
-}
-
-/**
- * Apply grade penalties to a user.
- *
- * Grade penalties are determined by the enabled penalty plugin.
- * This function should be called each time a module creates or updates a grade item for a user.
- *
- * @param int $userid The user ID
- * @param grade_item $gradeitem grade item
- * @param int $submissiondate submission date
- * @param int $duedate due date
- * @param bool $previewonly do not update the grade if true, only return the penalty
- * @return float deducted penalty percentage
- */
-function apply_grade_penalty_to_user(
-    int $userid,
-    grade_item $gradeitem,
-    int $submissiondate,
-    int $duedate,
-    bool $previewonly = false
-): float {
-
-    try {
-        $deductedpercentage = penalty_manager::apply_penalty($userid, $gradeitem, $submissiondate, $duedate, $previewonly);
-    } catch (\core\exception\moodle_exception $e) {
-        debugging($e->getMessage(), DEBUG_DEVELOPER);
-        return 0;
-    }
-    return $deductedpercentage;
 }

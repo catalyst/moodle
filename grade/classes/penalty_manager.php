@@ -20,6 +20,7 @@ use core\di;
 use core\hook;
 use core_grades\hook\after_penalty_applied;
 use core_grades\hook\before_penalty_applied;
+use grade_grade;
 use grade_item;
 
 /**
@@ -63,10 +64,37 @@ class penalty_manager {
     }
 
     /**
+     * Apply grade penalties to a user.
+     *
+     * Grade penalties are determined by the enabled penalty plugin.
+     * This function should be called each time a module creates or updates a grade item for a user.
+     *
+     * @param int $userid The user ID
+     * @param grade_item $gradeitem grade item
+     * @param int $submissiondate submission date
+     * @param int $duedate due date
+     * @param bool $previewonly do not update the grade if true, only return the penalty
+     * @return float deducted penalty percentage
+     */
+    public static function apply_grade_penalty_to_user(
+        int $userid,
+        grade_item $gradeitem,
+        int $submissiondate,
+        int $duedate,
+        bool $previewonly = false
+    ): float {
+
+        try {
+            $deductedpercentage = self::apply_penalty($userid, $gradeitem, $submissiondate, $duedate, $previewonly);
+        } catch (\core\exception\moodle_exception $e) {
+            debugging($e->getMessage(), DEBUG_DEVELOPER);
+            return 0;
+        }
+        return $deductedpercentage;
+    }
+
+    /**
      * Fetch the penalty for a user based on the submission date and due date and deduct marks from the grade item accordingly.
-     * 
-     * This function is called by apply_grade_penalty_to_user() which itself should be called
-     * after a module creates or updates a grade item for a user.
      *
      * @param int $userid ID of user
      * @param grade_item $gradeitem the grade item object
@@ -75,7 +103,7 @@ class penalty_manager {
      * @param bool $previewonly do not update the grade if true
      * @return float returns the deducted percentage.
      */
-    public static function apply_penalty(
+    private static function apply_penalty(
         int $userid,
         grade_item $gradeitem,
         int $submissiondate,
@@ -105,6 +133,16 @@ class penalty_manager {
         $beforepenaltyhook = new before_penalty_applied($userid, $gradeitem, $submissiondate, $duedate, $grade->finalgrade);
         di::get(hook\manager::class)->dispatch($beforepenaltyhook);
 
+        // Ensure the deducted percentage is within the valid range.
+        $deductedpercentage = $beforepenaltyhook->get_deducted_percentage();
+        if ($deductedpercentage < 0) {
+            throw new \coding_exception('The deducted percentage cannot be less than 0%.');
+        }
+
+        if ($deductedpercentage > 100) {
+            throw new \coding_exception('The deducted percentage cannot be greater than 100%.');
+        }
+
         // Apply the penalty to the grade.
         if (!$previewonly) {
             // Update the final grade after the penalty is applied.
@@ -125,15 +163,26 @@ class penalty_manager {
             di::get(hook\manager::class)->dispatch($afterpenaltyhook);
         }
 
-        $deductedpercentage = $beforepenaltyhook->get_deducted_percentage();
-        if ($deductedpercentage < 0) {
-            throw new \coding_exception('The deducted percentage cannot be less than 0%.');
-        }
-
-        if ($deductedpercentage > 100) {
-            throw new \coding_exception('The deducted percentage cannot be greater than 100%.');
-        }
-
         return $deductedpercentage;
+    }
+
+    /**
+     * Returns the penalty indicator HTML code if a penalty is applied to the grade.
+     * Otherwise, returns an empty string.
+     *
+     * @param grade_grade $grade Grade object
+     * @return string HTML code for penalty indicator
+     */
+    public static function show_penalty_indicator(grade_grade $grade): string {
+        global $PAGE;
+
+        // Show penalty indicator if penalty is greater than 0.
+        if ($grade->is_penalty_applied_to_final_grade()) {
+            $indicator = new \core_grades\output\penalty_indicator(2, $grade);
+            $renderer = $PAGE->get_renderer('core_grades');
+            return $renderer->render_penalty_indicator($indicator);
+        }
+
+        return '';
     }
 }
