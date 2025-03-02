@@ -20,6 +20,7 @@ use core\di;
 use core\hook;
 use core_grades\hook\after_penalty_applied;
 use core_grades\hook\before_penalty_applied;
+use core_plugin_manager;
 use grade_grade;
 use grade_item;
 
@@ -74,7 +75,7 @@ class penalty_manager {
      * @param int $submissiondate submission date
      * @param int $duedate due date
      * @param bool $previewonly do not update the grade if true, only return the penalty
-     * @return float deducted penalty percentage
+     * @return penalty_container Information about the applied penalty.
      */
     public static function apply_grade_penalty_to_user(
         int $userid,
@@ -82,15 +83,14 @@ class penalty_manager {
         int $submissiondate,
         int $duedate,
         bool $previewonly = false
-    ): float {
+    ): penalty_container {
 
         try {
-            $deductedpercentage = self::apply_penalty($userid, $gradeitem, $submissiondate, $duedate, $previewonly);
+            $container = self::apply_penalty($userid, $gradeitem, $submissiondate, $duedate, $previewonly);
         } catch (\core\exception\moodle_exception $e) {
             debugging($e->getMessage(), DEBUG_DEVELOPER);
-            return 0;
         }
-        return $deductedpercentage;
+        return $container;
     }
 
     /**
@@ -101,7 +101,7 @@ class penalty_manager {
      * @param int $submissiondate submission date
      * @param int $duedate due date
      * @param bool $previewonly do not update the grade if true
-     * @return float returns the deducted percentage.
+     * @return penalty_container The penalty container.
      */
     private static function apply_penalty(
         int $userid,
@@ -109,61 +109,47 @@ class penalty_manager {
         int $submissiondate,
         int $duedate,
         bool $previewonly = false
-    ): float {
-        // If the grade item belong to a supported module.
+    ): penalty_container {
+        // Fetch the grade and create a penalty container.
+        $grade = $gradeitem->get_grade($userid);
+        $container = new penalty_container($gradeitem, $grade, $submissiondate, $duedate);
+
+        // Check if grade penalties are enabled for the module.
         if (!self::is_penalty_enabled_for_module($gradeitem->itemmodule)) {
-            return 0;
+            return $container;
         }
 
-        // Check if there is any existing grade.
-        $grade = $gradeitem->get_final($userid);
+        // Check if the grade is empty or negative.
         if (!$grade || !$grade->rawgrade) {
             debugging('No raw grade found for user ' . $userid . ' and grade item ' . $gradeitem->id, DEBUG_DEVELOPER);
-            return 0;
+            return $container;
+
         } else if ($grade->rawgrade <= 0 || $grade->finalgrade <= 0) {
             // There is no penalty for zero or negative grades.
-            return 0;
+            return $container;
+
         } else if ($grade->overridden > 0 || $grade->locked > 0) {
-            // Do not apply penalty if the grade is overridden or locked.
             // We may need a separate setting to allow penalty for overridden grades.
-            return 0;
+            // Do not apply penalty if the grade is overridden or locked.
+            return $container;
         }
 
-        // Hook for plugins to calculate the penalty.
-        $beforepenaltyhook = new before_penalty_applied($userid, $gradeitem, $submissiondate, $duedate, $grade->finalgrade);
-        di::get(hook\manager::class)->dispatch($beforepenaltyhook);
-
-        // Ensure the deducted percentage is within the valid range.
-        $deductedpercentage = $beforepenaltyhook->get_deducted_percentage();
-        if ($deductedpercentage < 0) {
-            throw new \coding_exception('The deducted percentage cannot be less than 0%.');
-        }
-
-        if ($deductedpercentage > 100) {
-            throw new \coding_exception('The deducted percentage cannot be greater than 100%.');
+        // Iterate through all the penalty plugins to calculate the penalty.
+        foreach (core_plugin_manager::instance()->get_plugins_of_type('gradepenalty') as $pluginname => $plugin) {
+            $classname = "\\gradepenalty_{$pluginname}\\penalty_calculator";
+            if (class_exists($classname)) {
+                $classname::calculate_penalty($container);
+            }
         }
 
         // Apply the penalty to the grade.
         if (!$previewonly) {
             // Update the final grade after the penalty is applied.
-            $gradeitem->update_raw_grade($userid, $beforepenaltyhook->get_grade_after_penalty(), 'gradepenalty');
-            $gradeitem->update_deducted_mark($userid, $beforepenaltyhook->get_deducted_grade());
-
-            // Hook for plugins to process further after the penalty is applied to the grade.
-            $afterpenaltyhook = new after_penalty_applied(
-                $userid,
-                $gradeitem,
-                $submissiondate,
-                $duedate,
-                $beforepenaltyhook->get_grade_before_penalty(),
-                $beforepenaltyhook->get_deducted_percentage(),
-                $beforepenaltyhook->get_deducted_grade(),
-                $beforepenaltyhook->get_grade_after_penalty()
-            );
-            di::get(hook\manager::class)->dispatch($afterpenaltyhook);
+            $gradeitem->update_raw_grade($userid, $container->get_grade_after_penalties(), 'gradepenalty');
+            $gradeitem->update_deducted_mark($userid, $container->get_penalty());
         }
 
-        return $deductedpercentage;
+        return $container;
     }
 
     /**
