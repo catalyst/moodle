@@ -18,6 +18,7 @@ namespace mod_assign\penalty;
 
 use assign;
 use context_module;
+use core_grades\penalty_manager;
 use grade_item;
 
 /**
@@ -133,7 +134,8 @@ class helper {
         ]);
 
         // Apply penalty.
-        $deductedpercentage = apply_grade_penalty_to_user($userid, $gradeitem, $submissiondate, $duedate);
+        $container = penalty_manager::apply_grade_penalty_to_user($userid, $gradeitem, $submissiondate, $duedate);
+        $deductedpercentage = $container->get_penalty() / $container->get_grade_before_penalties() * 100;
 
         // Store the assign grade penalty.
         $DB->set_field_select(
