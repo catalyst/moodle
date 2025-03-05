@@ -179,8 +179,6 @@ final class penalty_test extends \advanced_testcase {
      * @dataProvider apply_penalty_provider
      *
      * @covers       \core_grades\penalty_manager::apply_penalty
-     * @covers       \core_grades\hook\before_penalty_applied
-     * @covers       \core_grades\hook\after_penalty_applied
      *
      * @param int $submissiondate submission date
      * @param int $duedate due date
@@ -252,8 +250,6 @@ final class penalty_test extends \advanced_testcase {
      * The penalty should be only applied on existing grade.
      *
      * @covers       \core_grades\penalty_manager::apply_penalty
-     * @covers       \core_grades\hook\before_penalty_applied
-     * @covers       \core_grades\hook\after_penalty_applied
      */
     public function test_no_grade(): void {
         $this->resetAfterTest();
