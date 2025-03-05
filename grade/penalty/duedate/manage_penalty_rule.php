@@ -35,7 +35,7 @@ require_once(__DIR__ . '/../../../config.php');
 require_once("$CFG->libdir/adminlib.php");
 
 // Page parameters.
-$contextid = required_param('contextid', PARAM_INT);
+$contextid = optional_param('contextid',1, PARAM_INT);
 $returnurl = optional_param('returnurl', '', PARAM_LOCALURL);
 $edit = optional_param('edit', 0, PARAM_INT);
 $reset = optional_param('reset', 0, PARAM_INT);

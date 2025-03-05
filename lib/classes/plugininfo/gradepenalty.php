@@ -126,4 +126,18 @@ class gradepenalty extends base {
     public function get_settings_section_name(): string {
         return $this->component;
     }
+
+    /**
+     * Setting url for the plugin.
+     *
+     */
+    public function get_settings_url(): url {
+        $plugins = get_plugin_list_with_function('gradepenalty', 'get_settings_url');
+        if (isset($plugins[$this->component])) {
+            return component_callback($this->component, 'get_settings_url');
+        } else {
+            // Use the default settings page.
+            return parent::get_settings_url();
+        }
+    }
 }

@@ -109,3 +109,10 @@ function gradepenalty_duedate_output_fragment_penalty_rule_form(array $args): st
     // Return html and js.
     return $form->render();
 }
+
+/**
+ * Define the setting page for the penalty rule.
+ */
+function gradepenalty_duedate_get_settings_url(): moodle_url {
+    return new url('/grade/penalty/duedate/manage_penalty_rule.php');
+}
