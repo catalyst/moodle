@@ -474,12 +474,10 @@ function assign_extend_settings_navigation(settings_navigation $settings, naviga
         );
     }
 
-    // Allow changing grade penalty settings at course module level.
+    // Allow changing grade penalty settings at course module level, on assignment module.
+    // Other modules can choose to allow this change or not.
     if (\mod_assign\penalty\helper::is_penalty_enabled($cm->instance)) {
-        $gradepenalties = get_plugin_list_with_function('gradepenalty', 'extend_navigation_module', 'lib.php');
-        foreach ($gradepenalties as $penaltyfunction) {
-            $penaltyfunction($navref, $cm);
-        }
+        \core_grades\penalty_manager::extend_navigation_module($settings, $navref);
     }
 }
 
