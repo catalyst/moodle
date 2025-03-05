@@ -58,8 +58,12 @@ class edit_penalty_rule_action_bar extends view_penalty_rule_action_bar {
             'contextid' => $contextid,
             'deleteallrules' => 1,
         ]);
-        $deleteallrulebutton = new single_button($deleteallruleurl, get_string('deleteallrules', 'gradepenalty_duedate'),
-            'get', single_button::BUTTON_DANGER);
+        $deleteallrulebutton = new single_button(
+            $deleteallruleurl,
+            get_string('deleteallrules', 'gradepenalty_duedate'),
+            'get',
+            single_button::BUTTON_DANGER
+        );
         $data['deleteallrulebutton'] = $deleteallrulebutton->export_for_template($output);
 
         return $data;
