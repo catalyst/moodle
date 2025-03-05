@@ -136,6 +136,9 @@ if ($edit) {
         // Redirect to the same page.
         redirect($url, get_string('changessaved'), 0, notification::NOTIFY_SUCCESS);
     }
+
+    // Add javascript to handle the repeater.
+    $PAGE->requires->js_call_amd('gradepenalty_duedate/edit_penalty_form', 'init');
 }
 
 // Start output.
