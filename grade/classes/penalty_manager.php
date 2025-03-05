@@ -170,4 +170,19 @@ class penalty_manager {
 
         return '';
     }
+
+    /**
+     * Allow penalty plugin to extend navigation module.
+     *
+     * @param \settings_navigation $settings The settings navigation object
+     * @param \navigation_node $navref The navigation node
+     * @return void
+     */
+    public static function extend_navigation_module(\settings_navigation $settings, \navigation_node $navref) {
+        $cm = $settings->get_page()->cm;
+        $gradepenalties = get_plugin_list_with_function('gradepenalty', 'extend_navigation_module');
+        foreach ($gradepenalties as $penaltyfunction) {
+            $penaltyfunction($navref, $cm);
+        }
+    }
 }
