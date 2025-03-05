@@ -16,10 +16,7 @@
 
 namespace core_grades;
 
-use core\di;
-use core\hook;
-use core_grades\hook\after_penalty_applied;
-use core_grades\hook\before_penalty_applied;
+use core\plugininfo\gradepenalty;
 use core_plugin_manager;
 use grade_grade;
 use grade_item;
@@ -136,9 +133,11 @@ class penalty_manager {
 
         // Iterate through all the penalty plugins to calculate the penalty.
         foreach (core_plugin_manager::instance()->get_plugins_of_type('gradepenalty') as $pluginname => $plugin) {
-            $classname = "\\gradepenalty_{$pluginname}\\penalty_calculator";
-            if (class_exists($classname)) {
-                $classname::calculate_penalty($container);
+            if (gradepenalty::is_plugin_enabled($pluginname)) {
+                $classname = "\\gradepenalty_{$pluginname}\\penalty_calculator";
+                if (class_exists($classname)) {
+                    $classname::calculate_penalty($container);
+                }
             }
         }
 
