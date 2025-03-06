@@ -1,8 +1,28 @@
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * Modal for deleting an override with the option to recalculate penalties.
+ *
+ * @module     mod_assign/override_delete_modal
+ * @copyright  2025 Catalyst IT Australia Pty Ltd
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 import * as CustomEvents from 'core/custom_interaction_events';
 import Modal from 'core/modal';
-
-// Custom modal.
-let modal = null;
 
 const SELECTORS = {
     DELETE_BUTTONS: '.delete-override',
@@ -18,28 +38,9 @@ export default class OverrideDeleteModal extends Modal {
 
     /**
      * Register the modal type.
-     * @param {string} confirmMessage The message to display in the modal.
-     * @param {boolean} showRecalculationCheckBox Whether to show the recalculation checkbox.
      * @returns {Promise<void>}
      */
-    static async init(confirmMessage, showRecalculationCheckBox) {
-        // Create the modal.
-        modal = await OverrideDeleteModal.create({
-            templateContext: {
-                confirmmessage: confirmMessage,
-                showpenaltyrecalculation: showRecalculationCheckBox,
-            },
-        });
-
-        // Add event listeners.
-        document.querySelectorAll(SELECTORS.DELETE_BUTTONS).forEach(button => {
-            button.addEventListener('click', async(event) => {
-                event.preventDefault();
-                modal.setOverrideId(button.getAttribute('data-overrideid'));
-                modal.setSessionKey(button.getAttribute('data-sesskey'));
-                modal.show();
-            });
-        });
+    static async init() {
     }
 
     /**
@@ -53,7 +54,7 @@ export default class OverrideDeleteModal extends Modal {
 
         // Always show on creation.
         modalConfig.show = false;
-        modalConfig.removeOnClose = false;
+        modalConfig.removeOnClose = true;
 
         // Apply standard configuration.
         super.configure(modalConfig);
@@ -141,24 +142,6 @@ export default class OverrideDeleteModal extends Modal {
         window.location.href = M.cfg.wwwroot + '/mod/assign/overridedelete.php?id=' + this.getOverrideId() +
             '&sesskey=' + this.getSessionKey() + '&confirm=1'
             + (recalculate ? '&recalculate=1' : '');
-
-        // Hide the modal.
-        this.hide();
-    }
-
-    /**
-     * Reset the modal data when hiding.
-     *
-     */
-    hide() {
-        // Reset the data.
-        this.setOverrideId(null);
-        this.setSessionKey(null);
-
-        // Reset the recalculation checkbox.
-        this.recalculationCheckbox.prop('checked', false);
-
-        super.hide();
     }
 }
 

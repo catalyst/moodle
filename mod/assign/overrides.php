@@ -174,6 +174,8 @@ $overrideediturl = new moodle_url('/mod/assign/overrideedit.php');
 
 $hasinactive = false; // Whether there are any inactive overrides.
 
+$PAGE->requires->js_call_amd('mod_assign/override_modal_manager', 'init', [$mode, !empty($assign->gradepenalty)]);
+
 foreach ($overrides as $override) {
 
     $fields = array();
@@ -241,23 +243,12 @@ foreach ($overrides as $override) {
     );
     $iconstr .= $deletelink;
 
-    // Confirm message for deletion.
-    if ($override->groupid) {
-        $group = $DB->get_record('groups', ['id' => $override->groupid], 'id, name');
-        $confirmstr = get_string("overridedeletegroupsure", "assign", format_string($group->name, true, ['context' => $context]));
-    } else {
-        $userfieldsapi = \core_user\fields::for_name();
-        $namefields = $userfieldsapi->get_sql('', false, '', '', false)->selects;
-        $user = $DB->get_record('user', ['id' => $override->userid],
-            'id, ' . $namefields);
-        $confirmstr = get_string("overridedeleteusersure", "assign", fullname($user));
-    }
-    // Add js script for "override delete" button.
-    $PAGE->requires->js_call_amd('mod_assign/override_delete_modal', 'init', [$confirmstr, $assign->gradepenalty]);
-
     if ($groupmode) {
-        $usergroupstr = '<a href="' . $groupurl->out(true, ['group' => $override->groupid]) . '" >' .
-            format_string($override->name, true, ['context' => $context]) . '</a>';
+        $usergroupstr = html_writer::link(
+            $groupurl->out(true, ['group' => $override->groupid]),
+            format_string($override->name, true, ['context' => $context]),
+            ['class' => 'usergroupname']
+        );
 
         // Move up.
         if ($override->sortorder > 1) {
@@ -279,9 +270,11 @@ foreach ($overrides as $override) {
 
 
     } else {
-        $usergroupstr = html_writer::link($userurl->out(false,
-                array('id' => $override->userid, 'course' => $course->id)),
-                fullname($override));
+        $usergroupstr = html_writer::link(
+            $userurl->out(false, ['id' => $override->userid, 'course' => $course->id]),
+            fullname($override),
+            ['class' => 'usergroupname']
+        );
     }
 
     $class = '';
