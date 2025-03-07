@@ -112,9 +112,12 @@ final class penalty_container {
     /**
      * Get the penalised grade.
      *
+     * The penalised grade is clamped between the minimum and maximum grade for the grade item.
+     *
      * @return float The penalised grade
      */
     public function get_grade_after_penalties(): float {
+        // Prevent grades from becoming out of bounds which would otherwise be a fairly common occurrence.
         return self::clamp(
             $this->get_grade_before_penalties() - $this->penalty,
             $this->get_min_grade(),
@@ -151,9 +154,17 @@ final class penalty_container {
 
     /**
      * Aggregate the number of points to deduct from the grade.
-     * Each penalty plugin should call this method from their calculate_penalty() method.
+     * Each penalty plugin is expected to call this method from their calculate_penalty() method.
      *
-     * @param float $penalty The penalty value to aggregate
+     * For example, if a grade item has a maximum grade of 200 and a penalty plugin wants to deduct 10% from the maximum grade,
+     * the penalty plugin should call this method with a penalty value of 20.
+     *
+     * Percentages must not be passed to this method. Any percentage values must be converted to points before calling this method.
+     * Negative penalty values are permitted and will increase the grade for the user but this behaviour is not encouraged.
+     * After all penalty plugins have been called, the core penalty system will apply the aggregated penalty to the grade,
+     * clamping the grade between the minimum and maximum grade for the grade item.
+     *
+     * @param float $penalty The number of points to deduct from the grade
      */
     public function aggregate_penalty(float $penalty): void {
         $this->penalty += $penalty;

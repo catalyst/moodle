@@ -19,12 +19,19 @@ namespace core_grades;
 use core_grades\penalty_container;
 
 /**
- * Penalty plugins must override this class to implement their own penalty calculation.
+ * Abstract class for defining the interface between the core penalty system and penalty plugins.
+ * Penalty plugins must override this class under their own namespace to receive calls from the core penalty system.
  *
  * @package   core_grades
  * @copyright 2025 Catalyst IT Australia Pty Ltd
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 abstract class penalty_calculator {
+    /**
+     * Calculate the grade penalty based on the information provided in the penalty container.
+     * The result should be stored in the penalty container.
+     *
+     * @param penalty_container $container
+     */
     abstract public static function calculate_penalty(penalty_container $container): void;
 }
