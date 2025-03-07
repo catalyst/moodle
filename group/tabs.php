@@ -23,15 +23,15 @@
  */
     $row = array();
     $row[] = new tabobject('groups',
-                           new moodle_url('/group/index.php', array('id' => $courseid)),
+                           new moodle_url('/group/index.php', array('id' => $contextid)),
                            get_string('groups'));
 
     $row[] = new tabobject('groupings',
-                           new moodle_url('/group/groupings.php', array('id' => $courseid)),
+                           new moodle_url('/group/groupings.php', array('id' => $contextid)),
                            get_string('groupings', 'group'));
 
     $row[] = new tabobject('overview',
-                           new moodle_url('/group/overview.php', array('id' => $courseid)),
+                           new moodle_url('/group/overview.php', array('id' => $contextid)),
                            get_string('overview', 'group'));
     echo '<div class="groupdisplay">';
     echo $OUTPUT->tabtree($row, $currenttab);

@@ -24,15 +24,15 @@
 
     $row = $tabs = array();
 
-    $context = context_course::instance($courseid);
+    $context = context_course::instance($contextid);
 
     $row[] = new tabobject('courseoutcomes',
-                           $CFG->wwwroot.'/grade/edit/outcome/course.php?id='.$courseid,
+                           $CFG->wwwroot.'/grade/edit/outcome/course.php?id='.$contextid,
                            get_string('outcomescourse', 'grades'));
 
     if (has_capability('moodle/grade:manage', $context)) {
         $row[] = new tabobject('outcomes',
-                               $CFG->wwwroot.'/grade/edit/outcome/index.php?id='.$courseid,
+                               $CFG->wwwroot.'/grade/edit/outcome/index.php?id='.$contextid,
                                get_string('editoutcomes', 'grades'));
     }
 

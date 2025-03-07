@@ -36,21 +36,10 @@ use core\url;
  * @return void
  */
 function gradepenalty_duedate_extend_navigation_course(navigation_node $navigation, stdClass $course, context $context): void {
-    // Get plugin info of this plugin.
-    $penaltyplugins = core_plugin_manager::instance()->get_plugins_of_type('gradepenalty');
-
-    // Return if the plugin is not enabled.
-    if (!$penaltyplugins['duedate']->is_enabled()) {
-        return;
-    }
-
     if (has_capability('gradepenalty/duedate:manage', $context)) {
         $url = new url('/grade/penalty/duedate/manage_penalty_rule.php', ['contextid' => $context->id]);
-
-        $settingsnode = navigation_node::create(get_string('penaltyrule', 'gradepenalty_duedate'),
-            $url, navigation_node::TYPE_SETTING,
-            null, 'penaltyrule', new pix_icon('i/settings', ''));
-        $navigation->add_node($settingsnode);
+        $name = get_string('penaltyrule', 'gradepenalty_duedate');
+        $navigation->add($name, $url, navigation_node::TYPE_SETTING, null, null, new pix_icon('i/settings', ''));
     }
 }
 
@@ -62,28 +51,11 @@ function gradepenalty_duedate_extend_navigation_course(navigation_node $navigati
  * @return void
  */
 function gradepenalty_duedate_extend_navigation_module(navigation_node $navigation, cm_info $cm): void {
-    // Get plugin info of this plugin.
-    $penaltyplugins = core_plugin_manager::instance()->get_plugins_of_type('gradepenalty');
-
-    // Return if the plugin is not enabled.
-    if (!$penaltyplugins['duedate']->is_enabled()) {
-        return;
-    }
-
-    // Return if the module is not enabled.
-    if (!penalty_manager::is_penalty_enabled_for_module($cm->modname)) {
-        return;
-    }
-
     $context = context_module::instance($cm->id);
-
     if (has_capability('gradepenalty/duedate:manage', $context)) {
         $url = new url('/grade/penalty/duedate/manage_penalty_rule.php', ['contextid' => $context->id]);
-
-        $settingsnode = navigation_node::create(get_string('penaltyrule', 'gradepenalty_duedate'),
-            $url, navigation_node::TYPE_SETTING,
-            null, 'penaltyrule', new pix_icon('i/settings', ''));
-        $navigation->add_node($settingsnode);
+        $name = get_string('penaltyrule', 'gradepenalty_duedate');
+        $navigation->add($name, $url, navigation_node::TYPE_SETTING, null, null, new pix_icon('i/settings', ''));
     }
 }
 
