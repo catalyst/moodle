@@ -61,6 +61,7 @@ class before_penalty_recalculation implements StoppableEventInterface {
 
         $this->context = $context;
         $this->usermodified = $userid ?? $USER->id;
-        $this->timestamp = time();
+        $clock = \core\di::get(\core\clock::class);
+        $this->timestamp = $clock->time();
     }
 }
