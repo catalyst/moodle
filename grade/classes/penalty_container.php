@@ -18,6 +18,7 @@ namespace core_grades;
 
 use grade_grade;
 use grade_item;
+use moodle_exception;
 
 /**
  * An object for storing and aggregating penalty information.
@@ -160,13 +161,18 @@ final class penalty_container {
      * the penalty plugin should call this method with a penalty value of 20.
      *
      * Percentages must not be passed to this method. Any percentage values must be converted to points before calling this method.
-     * Negative penalty values are permitted and will increase the grade for the user but this behaviour is not encouraged.
+     * Penalty values cannot be negative or an exception will be thrown.
      * After all penalty plugins have been called, the core penalty system will apply the aggregated penalty to the grade,
      * clamping the grade between the minimum and maximum grade for the grade item.
      *
      * @param float $penalty The number of points to deduct from the grade
+     * @throws moodle_exception Thrown if the penalty value is negative
      */
     public function aggregate_penalty(float $penalty): void {
+        if ($penalty < 0.0) {
+            throw new moodle_exception('errornegativepenalty', 'core_grades', '', $this->get_grade_grade()->id);
+        }
+
         $this->penalty += $penalty;
     }
 
