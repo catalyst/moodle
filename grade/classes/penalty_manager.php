@@ -16,10 +16,16 @@
 
 namespace core_grades;
 
+use core\context;
 use core\plugininfo\gradepenalty;
 use core_plugin_manager;
 use grade_grade;
 use grade_item;
+use moodle_url;
+use navigation_node;
+use pix_icon;
+use settings_navigation;
+use stdClass;
 
 /**
  * Manager class for grade penalty.
@@ -172,17 +178,61 @@ class penalty_manager {
     }
 
     /**
+     * Allow penalty plugin to extend course navigation.
+     *
+     * @param navigation_node $navigation The navigation node
+     * @param stdClass $course The course object
+     * @param context $coursecontext The course context
+     */
+    public static function extend_navigation_course(navigation_node $navigation,
+                                                    stdClass $course,
+                                                    context $coursecontext): void {
+        // Create new navigation node for grade penalty.
+        $penaltynav = $navigation->add(get_string('gradepenalty', 'core_grades'),
+            new moodle_url('/grade/penalty/view.php', ['contextid' => $coursecontext->id]),
+            navigation_node::TYPE_CONTAINER, null, 'gradepenalty', new pix_icon('i/grades', ''));
+
+        // Allow plugins to extend the navigation.
+        $pluginfunctions = get_plugin_list_with_function('gradepenalty', 'extend_navigation_course');
+        foreach ($pluginfunctions as $plugin => $function) {
+            if (gradepenalty::is_plugin_enabled($plugin)) {
+                $function($penaltynav, $course, $coursecontext);
+            }
+        }
+
+        // Do not display the node if there are no children.
+        if (!$penaltynav->has_children()) {
+            $penaltynav->remove();
+        }
+    }
+
+    /**
      * Allow penalty plugin to extend navigation module.
      *
-     * @param \settings_navigation $settings The settings navigation object
-     * @param \navigation_node $navref The navigation node
+     * @param settings_navigation $settings The settings navigation object
+     * @param navigation_node $navref The navigation node
      * @return void
      */
-    public static function extend_navigation_module(\settings_navigation $settings, \navigation_node $navref) {
+    public static function extend_navigation_module(settings_navigation $settings, navigation_node $navref) {
+        $context = $settings->get_page()->context;
         $cm = $settings->get_page()->cm;
-        $gradepenalties = get_plugin_list_with_function('gradepenalty', 'extend_navigation_module');
-        foreach ($gradepenalties as $penaltyfunction) {
-            $penaltyfunction($navref, $cm);
+
+        // Create new navigation node for grade penalty.
+        $penaltynav = $navref->add(get_string('gradepenalty', 'core_grades'),
+            new moodle_url('/grade/penalty/view.php', ['contextid' => $context->id, 'cm' => $cm->id]),
+            navigation_node::TYPE_CONTAINER, null, 'gradepenalty', new pix_icon('i/grades', ''));
+
+        // Allow plugins to extend the navigation.
+        $pluginfunctions = get_plugin_list_with_function('gradepenalty', 'extend_navigation_module');
+        foreach ($pluginfunctions as $plugin => $function) {
+            if (gradepenalty::is_plugin_enabled($plugin) && self::is_penalty_enabled_for_module($cm->modname)) {
+                $function($penaltynav, $cm);
+            }
+        }
+
+        // Do not display the node if there are no children.
+        if (!$penaltynav->has_children()) {
+            $penaltynav->remove();
         }
     }
 }

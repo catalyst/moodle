@@ -114,6 +114,9 @@ class gradepenalty extends base {
      * @return bool if the plugin is enabled.
      */
     public static function is_plugin_enabled(string $pluginname): bool {
+        // Check if the plugin contains plugin type, remove it.
+        $pluginname = str_replace('gradepenalty_', '', $pluginname);
+
         return key_exists($pluginname, self::get_enabled_plugins());
     }
 

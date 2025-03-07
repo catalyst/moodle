@@ -16,7 +16,7 @@
 
 namespace core_grades\hook;
 
-use core\context\module;
+use core\context;
 use core\hook\stoppable_trait;
 use Psr\EventDispatcher\StoppableEventInterface;
 
@@ -35,8 +35,8 @@ use Psr\EventDispatcher\StoppableEventInterface;
 class before_penalty_recalculation implements StoppableEventInterface {
     use stoppable_trait;
 
-    /** @var \context $context The context in which the recalculation applies. */
-    public readonly \context $context;
+    /** @var context $context The context in which the recalculation applies. */
+    public readonly context $context;
 
     /** @var int $usermodified The user who triggered the event. */
     public readonly int $usermodified;
@@ -47,10 +47,10 @@ class before_penalty_recalculation implements StoppableEventInterface {
     /**
      * Constructor for the hook.
      *
-     * @param \context $context The context object
+     * @param context $context The context object
      * @param int|null $userid The user who triggered the event
      */
-    public function __construct(\context $context, ?int $userid = null) {
+    public function __construct(context $context, ?int $userid = null) {
         global $USER;
 
         // Throw error if context is not a module context or course context.

@@ -22,7 +22,6 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-use core_grades\hook\before_penalty_recalculation;
 use core\output\notification;
 use core\url;
 use gradepenalty_duedate\output\edit_penalty_rule_action_bar;
@@ -39,7 +38,6 @@ $contextid = optional_param('contextid',1, PARAM_INT);
 $returnurl = optional_param('returnurl', '', PARAM_LOCALURL);
 $edit = optional_param('edit', 0, PARAM_INT);
 $reset = optional_param('reset', 0, PARAM_INT);
-$recalculate = optional_param('recalculate', 0, PARAM_INT);
 $deleteeall = optional_param('deleteallrules', 0, PARAM_INT);
 
 // Check login and permissions.
@@ -99,26 +97,6 @@ if ($reset || $deleteeall) {
     penalty_rule::reset_rules($contextid);
 }
 
-// Check if the recalculate button is clicked.
-if ($recalculate) {
-    // Show message for user confirmation.
-    $confirmurl = new url($url->out(), [
-        'contextid' => $contextid,
-        'recalculateconfirm' => 1,
-        'sesskey' => sesskey(),
-    ]);
-    echo $OUTPUT->header();
-    echo $OUTPUT->confirm(get_string('recalculatepenaltyconfirm', 'gradepenalty_duedate'), $confirmurl, $url);
-    echo $OUTPUT->footer();
-    die;
-
-} else if (optional_param('recalculateconfirm', 0, PARAM_INT) && confirm_sesskey()) {
-    // Create and dispatch the recalculation event.
-    $hook = new before_penalty_recalculation($context);
-    \core\di::get(\core\hook\manager::class)->dispatch($hook);
-    redirect($url, get_string('recalculatepenaltysuccess', 'gradepenalty_duedate'), 0, notification::NOTIFY_SUCCESS);
-}
-
 // Only initialize the form if we are in edit mode.
 if ($edit) {
     // Create a form to add / edit penalty rules.
@@ -148,22 +126,6 @@ if (!$edit) {
     $actionbar = new view_penalty_rule_action_bar($context, $title, $url);
     $renderer = $PAGE->get_renderer('core_grades');
     echo $renderer->render_action_bar($actionbar);
-
-    // Display the penalty recalculation button at course/module context.
-    if ($context->contextlevel == CONTEXT_COURSE || $context->contextlevel == CONTEXT_MODULE) {
-        echo $OUTPUT->heading_with_help(get_string('recalculatepenalty', 'gradepenalty_duedate'),
-            'recalculatepenalty',
-            'gradepenalty_duedate',
-            '',
-            '',
-            5);
-        $buttonurl = $url;
-        $buttonurl->params(['contextid' => $contextid, 'recalculate' => 1]);
-        echo $OUTPUT->single_button($buttonurl, get_string('recalculatepenaltybutton', 'gradepenalty_duedate'), 'get',
-            ['type' => 'primary']);
-        // The empty paragraph is used as a spacer.
-        echo $OUTPUT->paragraph('');
-    }
 
     // Display the penalty table.
     echo $OUTPUT->heading(get_string('existingrule', 'gradepenalty_duedate'), 5);
