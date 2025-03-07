@@ -185,6 +185,7 @@ $string['errorcalculationnoequal'] = 'Formula must start with equal sign (=1+2)'
 $string['errorcalculationunknown'] = 'Invalid formula';
 $string['errorcalculationbroken'] = 'Error in the calculation of grade item {$a}.';
 $string['errorgradevaluenonnumeric'] = 'Received non-numeric for low or high grade for';
+$string['errornegativepenalty'] = 'Received negative value during penalty aggregation for grade ID {$a}';
 $string['errornocalculationallowed'] = 'Calculations are not allowed for this item';
 $string['errornocategorisedid'] = 'Could not get an uncategorised id!';
 $string['errornocourse'] = 'Could not get course information';
