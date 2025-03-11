@@ -34,6 +34,7 @@ final class penalty_rule_persistent_test extends penalty_testcase {
      * @covers \gradepenalty_duedate\penalty_rule::get_rules
      */
     public function test_get_rules(): void {
+        $this->resetAfterTest();
         $this->create_sample_rules();
 
         $course = $this->getDataGenerator()->create_course();
@@ -70,6 +71,7 @@ final class penalty_rule_persistent_test extends penalty_testcase {
      * @covers \gradepenalty_duedate\penalty_rule::reset_rules
      */
     public function test_reset_rules(): void {
+        $this->resetAfterTest();
         $this->create_sample_rules();
         $systemcontextid = context_system::instance()->id;
         penalty_rule::reset_rules($systemcontextid);
@@ -85,6 +87,7 @@ final class penalty_rule_persistent_test extends penalty_testcase {
      * @covers \gradepenalty_duedate\penalty_rule::is_overridden
      */
     public function test_is_overridden(): void {
+        $this->resetAfterTest();
         // System context penalty rules are never considered to be overridden.
         $systemcontextid = context_system::instance()->id;
         $this->create_sample_rules();
@@ -107,6 +110,7 @@ final class penalty_rule_persistent_test extends penalty_testcase {
      * @covers \gradepenalty_duedate\penalty_rule::is_inherited
      */
     public function test_is_inherited(): void {
+        $this->resetAfterTest();
         // System context.
         $systemcontextid = context_system::instance()->id;
         $this->create_sample_rules();

@@ -16,30 +16,27 @@
 
 namespace gradepenalty_duedate;
 
+use cm_info;
 use context_course;
 use context_module;
 use context_system;
 use core\plugininfo\gradepenalty;
+use core_grades\penalty_manager;
 use grade_item;
-use gradepenalty_duedate\hook_callbacks;
 use gradepenalty_duedate\tests\penalty_testcase;
 
-defined('MOODLE_INTERNAL') || die();
-
-global $CFG;
-
 /**
- * Test hook callbacks.
+ * Test for penalty calculator.
  *
  * @package   gradepenalty_duedate
  * @copyright 2024 Catalyst IT Australia Pty Ltd
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class hook_listener_test extends penalty_testcase {
+final class penalty_calculator_test extends penalty_testcase {
     /**
      * Data provider for test_calculate_penalty.
      */
-    public static function apply_penalty_provider(): array {
+    public static function calculate_penalty_provider(): array {
         return [
             // Submission date, due date and expected grade.
             // No penalty.
@@ -68,17 +65,17 @@ final class hook_listener_test extends penalty_testcase {
     /**
      * Test calculate penalty.
      *
-     * @dataProvider apply_penalty_provider
+     * @dataProvider calculate_penalty_provider
      *
-     * @covers \gradepenalty_duedate\hook\hook_listener::calculate_grade_penalty
-     * @covers \gradepenalty_duedate\hook\hook_listener::find_effective_penalty_rules
-     * @covers \gradepenalty_duedate\hook\hook_listener::apply_penalty
+     * @covers penalty_calculator::find_effective_penalty_rules
+     * @covers penalty_calculator::calculate_penalty
+     * @covers penalty_calculator::get_penalty_from_rules
      *
      * @param int $submissiondate The submission date.
      * @param int $duedate The due date.
      * @param int $expectedgrade The expected grade.
      */
-    public function test_apply_penalty(int $submissiondate, int $duedate, int $expectedgrade): void {
+    public function test_calculate_penalty(int $submissiondate, int $duedate, int $expectedgrade): void {
         $this->resetAfterTest();
 
         // Create a course and an assignment.
@@ -108,7 +105,7 @@ final class hook_listener_test extends penalty_testcase {
         $gradeitem = grade_item::fetch($gradeitemparams);
 
         // Apply penalty.
-        apply_grade_penalty_to_user($user->id, $gradeitem, $submissiondate, $duedate);
+        penalty_manager::apply_grade_penalty_to_user($user->id, $gradeitem, $submissiondate, $duedate);
 
         // Check the grade.
         $this->assertEquals($expectedgrade, $gradeitem->get_final($user->id)->finalgrade);
@@ -117,10 +114,10 @@ final class hook_listener_test extends penalty_testcase {
     /**
      * Rules set at different contexts.
      *
-     * @covers \gradepenalty_duedate\hook\handler::find_effective_penalty_rules
-     * @covers \gradepenalty_duedate\hook\handler::calculate_penalty_percentage
+     * @covers penalty_calculator::find_effective_penalty_rules
+     * @covers penalty_calculator::get_penalty_from_rules
      */
-    public function test_effective_rules(): void {
+    public function test_find_effective_penalty_rules(): void {
         global $DB;
         $this->resetAfterTest();
 
@@ -128,6 +125,7 @@ final class hook_listener_test extends penalty_testcase {
         $course = $this->getDataGenerator()->create_course();
         $assignment = $this->getDataGenerator()->create_module('assign', ['course' => $course->id]);
         $cm = get_coursemodule_from_instance('assign', $assignment->id, $course->id);
+        $cm = cm_info::create($cm);
 
         // Create a penalty rule at the system context.
         $systemcontext = context_system::instance();
@@ -139,7 +137,7 @@ final class hook_listener_test extends penalty_testcase {
         ];
         $DB->insert_record('gradepenalty_duedate_rule', (object)$systemrule);
         // The penalty should be 10%.
-        $this->assertEquals(10, hook_callbacks::get_penalty_from_rules($cm, DAYSECS, 0));
+        $this->assertEquals(10, penalty_calculator::get_penalty_from_rules($cm, DAYSECS, 0));
 
         // Create a penalty rule at the course context.
         $coursecontext = context_course::instance($course->id);
@@ -151,10 +149,11 @@ final class hook_listener_test extends penalty_testcase {
         ];
         $DB->insert_record('gradepenalty_duedate_rule', (object)$courserule);
         // The penalty should be 20%.
-        $this->assertEquals(20, hook_callbacks::get_penalty_from_rules($cm, DAYSECS, 0));
+        $this->assertEquals(20, penalty_calculator::get_penalty_from_rules($cm, DAYSECS, 0));
 
         // Create a penalty rule at the module context.
         $cm = get_coursemodule_from_instance('assign', $assignment->id, $course->id);
+        $cm = cm_info::create($cm);
         $modulecontext = context_module::instance($cm->id);
         $modulerule = [
             'contextid' => $modulecontext->id,
@@ -164,6 +163,6 @@ final class hook_listener_test extends penalty_testcase {
         ];
         $DB->insert_record('gradepenalty_duedate_rule', (object)$modulerule);
         // The penalty should be 30%.
-        $this->assertEquals(30, hook_callbacks::get_penalty_from_rules($cm, DAYSECS, 0));
+        $this->assertEquals(30, penalty_calculator::get_penalty_from_rules($cm, DAYSECS, 0));
     }
 }
