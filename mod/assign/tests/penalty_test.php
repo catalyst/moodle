@@ -16,10 +16,12 @@
 
 namespace mod_assign;
 
+use core_component;
 use core_grades\penalty_manager;
 use grade_item;
 use mod_assign_test_generator;
 use mod_assign_testable_assign;
+use ReflectionClass;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -44,18 +46,20 @@ final class penalty_test extends \advanced_testcase {
      * @return array The course and student.
      */
     protected function set_up_test(): array {
+        global $CFG;
         $this->setAdminUser();
 
-        // Hook mock up.
-        require_once(__DIR__ . '/fixtures/hooks/plugin1_hook_listener.php');
-        \core\di::set(
-            \core\hook\manager::class,
-            \core\hook\manager::phpunit_get_instance([
-                'test_plugin1' => __DIR__ . '/fixtures/hooks/hooks.php',
-            ]),
-        );
-
         set_config('gradepenalty_supportedplugins', 'assign');
+
+        // Load a mocked grade penalty plugin.
+        $mockedcomponent = new ReflectionClass(core_component::class);
+        $mockedplugins = $mockedcomponent->getProperty('plugins');
+        $plugins = $mockedplugins->getValue();
+        $plugins['gradepenalty'] = ["fake_deduction" => "{$CFG->dirroot}/mod/assign/tests/fixtures/fakeplugins/fake_deduction"];
+        // Load the penalty_calculator class.
+        require_once($CFG->dirroot . '/mod/assign/tests/fixtures/fakeplugins/fake_deduction/classes/penalty_calculator.php');
+        $mockedplugins->setValue(null, $plugins);
+
         \core\plugininfo\gradepenalty::enable_plugin('fake_deduction', true);
 
         // Create a course with user.
@@ -86,7 +90,6 @@ final class penalty_test extends \advanced_testcase {
 
         // Assign should be enabled by now.
         $this->assertTrue(penalty_manager::is_penalty_enabled_for_module('assign'));
-
     }
 
     /**

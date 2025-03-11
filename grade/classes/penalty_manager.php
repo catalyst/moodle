@@ -213,7 +213,7 @@ class penalty_manager {
      * @param navigation_node $navref The navigation node
      * @return void
      */
-    public static function extend_navigation_module(settings_navigation $settings, navigation_node $navref) {
+    public static function extend_navigation_module(settings_navigation $settings, navigation_node $navref): void {
         $context = $settings->get_page()->context;
         $cm = $settings->get_page()->cm;
 
