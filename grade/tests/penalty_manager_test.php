@@ -36,10 +36,33 @@ final class penalty_manager_test extends advanced_testcase {
         $this->resetAfterTest();
         $this->setAdminUser();
 
-        set_config('gradepenalty_enabledmodules', 'mod_assign');
+        // No modules are enabled by default.
+        $this->assertEmpty(penalty_manager::get_enabled_modules());
 
-        $this->assertFalse(penalty_manager::is_penalty_enabled_for_module('mod_quiz'));
-        $this->assertTrue(penalty_manager::is_penalty_enabled_for_module('mod_assign'));
+        // Enable a module.
+        penalty_manager::enable_module('assign');
+        $this->assertCount(1, penalty_manager::get_enabled_modules());
+        $this->assertTrue(penalty_manager::is_penalty_enabled_for_module('assign'));
+
+        // Enable multiple modules.
+        penalty_manager::enable_modules(['quiz', 'forum', 'page']);
+        $this->assertCount(4, penalty_manager::get_enabled_modules());
+        $this->assertTrue(penalty_manager::is_penalty_enabled_for_module('assign'));
+        $this->assertTrue(penalty_manager::is_penalty_enabled_for_module('quiz'));
+        $this->assertTrue(penalty_manager::is_penalty_enabled_for_module('forum'));
+        $this->assertTrue(penalty_manager::is_penalty_enabled_for_module('page'));
+
+        // Disable a module.
+        penalty_manager::disable_module('assign');
+        $this->assertCount(3, penalty_manager::get_enabled_modules());
+        $this->assertTrue(penalty_manager::is_penalty_enabled_for_module('quiz'));
+        $this->assertTrue(penalty_manager::is_penalty_enabled_for_module('forum'));
+        $this->assertTrue(penalty_manager::is_penalty_enabled_for_module('page'));
+
+        // Disable multiple modules.
+        penalty_manager::disable_modules(['quiz', 'forum']);
+        $this->assertCount(1, penalty_manager::get_enabled_modules());
+        $this->assertTrue(penalty_manager::is_penalty_enabled_for_module('page'));
     }
 
     /**
