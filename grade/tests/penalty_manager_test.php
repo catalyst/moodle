@@ -37,7 +37,7 @@ final class penalty_manager_test extends advanced_testcase {
         $this->resetAllData();
         $this->setAdminUser();
 
-        set_config('gradepenalty_supportedplugins', 'mod_assign');
+        set_config('gradepenalty_enabledmodules', 'mod_assign');
 
         $this->assertFalse(penalty_manager::is_penalty_enabled_for_module('mod_quiz'));
         $this->assertTrue(penalty_manager::is_penalty_enabled_for_module('mod_assign'));

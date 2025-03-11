@@ -58,7 +58,7 @@ class penalty_manager {
      * @return array List of enabled modules.
      */
     public static function get_enabled_modules(): array {
-        return explode(',', get_config('core', 'gradepenalty_supportedplugins'));
+        return explode(',', get_config('core', 'gradepenalty_enabledmodules'));
     }
 
     /**
