@@ -49,7 +49,7 @@ final class penalty_test extends \advanced_testcase {
         global $CFG;
         $this->setAdminUser();
 
-        set_config('gradepenalty_supportedplugins', 'assign');
+        set_config('gradepenalty_enabledmodules', 'assign');
 
         // Load a mocked grade penalty plugin.
         $mockedcomponent = new ReflectionClass(core_component::class);
@@ -86,7 +86,7 @@ final class penalty_test extends \advanced_testcase {
         $this->assertFalse(penalty_manager::is_penalty_enabled_for_module('assign'));
 
         // Enable penalty for assign.
-        set_config('gradepenalty_supportedplugins', 'assign');
+        set_config('gradepenalty_enabledmodules', 'assign');
 
         // Assign should be enabled by now.
         $this->assertTrue(penalty_manager::is_penalty_enabled_for_module('assign'));

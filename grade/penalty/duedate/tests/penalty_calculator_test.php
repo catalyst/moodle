@@ -87,7 +87,7 @@ final class penalty_calculator_test extends penalty_testcase {
         $this->create_sample_rules();
 
         // Enable grade penalty.
-        set_config('gradepenalty_supportedplugins', 'quiz,assign');
+        set_config('gradepenalty_enabledmodules', 'quiz,assign');
         gradepenalty::enable_plugin('duedate', true);
 
         // Add a grade.

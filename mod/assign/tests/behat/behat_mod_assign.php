@@ -80,7 +80,7 @@ class behat_mod_assign extends behat_base {
     public function i_enable_grade_penalties_for_assignment(): void {
         global $DB;
 
-        set_config('gradepenalty_supportedplugins', 'assign');
+        set_config('gradepenalty_enabledmodules', 'assign');
         \core\plugininfo\gradepenalty::enable_plugin('duedate', true);
 
         $rule = ['contextid' => 1, 'overdueby' => DAYSECS, 'penalty' => 10, 'sortorder' => 0];

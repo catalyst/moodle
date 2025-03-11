@@ -236,9 +236,9 @@ if (has_capability('moodle/grade:manage', $systemcontext)
         foreach ($modules as $module) {
             $options[$module] = new lang_string('modulename', $module);
         }
-        $temp->add(new admin_setting_configmultiselect('gradepenalty_supportedplugins',
-            new lang_string('gradepenalty_supportedplugins', 'grades'),
-            new lang_string('gradepenalty_supportedplugins_help', 'grades'), [], $options));
+        $temp->add(new admin_setting_configmultiselect('gradepenalty_enabledmodules',
+            new lang_string('gradepenalty_enabledmodules', 'grades'),
+            new lang_string('gradepenalty_enabledmodules_help', 'grades'), [], $options));
 
         // Option to apply penalty to overridden grades.
         $temp->add(new admin_setting_configcheckbox('gradepenalty_overriddengrade',
