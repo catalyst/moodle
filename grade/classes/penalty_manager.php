@@ -58,7 +58,45 @@ class penalty_manager {
      * @return array List of enabled modules.
      */
     public static function get_enabled_modules(): array {
-        return explode(',', get_config('core', 'gradepenalty_enabledmodules'));
+        return array_filter(explode(',', get_config('core', 'gradepenalty_enabledmodules')));
+    }
+
+    /**
+     * Enable the grade penalty feature for a module.
+     *
+     * @param string $module The module name (e.g. 'assign').
+     */
+    public static function enable_module(string $module): void {
+        self::enable_modules([$module]);
+    }
+
+    /**
+     * Enable the grade penalty feature for multiple modules.
+     *
+     * @param array $modules List of module names.
+     */
+    public static function enable_modules(array $modules): void {
+        $result = array_unique(array_merge(self::get_enabled_modules(), $modules));
+        set_config('gradepenalty_enabledmodules', implode(',', $result));
+    }
+
+    /**
+     * Disable the grade penalty feature for a module.
+     *
+     * @param string $module The module name (e.g. 'assign').
+     */
+    public static function disable_module(string $module): void {
+        self::disable_modules([$module]);
+    }
+
+    /**
+     * Disable the grade penalty feature for multiple modules.
+     *
+     * @param array $modules List of module names.
+     */
+    public static function disable_modules(array $modules): void {
+        $result = array_diff(self::get_enabled_modules(), $modules);
+        set_config('gradepenalty_enabledmodules', implode(',', $result));
     }
 
     /**
