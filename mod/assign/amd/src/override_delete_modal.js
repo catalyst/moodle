@@ -37,13 +37,6 @@ export default class OverrideDeleteModal extends Modal {
     static TEMPLATE = "mod_assign/override_delete_modal";
 
     /**
-     * Register the modal type.
-     * @returns {Promise<void>}
-     */
-    static async init() {
-    }
-
-    /**
      * Configure the modal.
      *
      * @param {Object} modalConfig

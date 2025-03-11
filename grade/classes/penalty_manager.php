@@ -109,6 +109,12 @@ class penalty_manager {
         return in_array($module, self::get_enabled_modules());
     }
 
+    /**
+     * Whether the grade penalty feature is enabled for a grade.
+     *
+     * @param grade_grade $grade
+     * @return bool
+     */
     private static function is_penalty_enabled_for_grade(grade_grade $grade): bool {
         if (empty($grade)) {
             return false;

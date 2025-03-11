@@ -87,7 +87,7 @@ const registerEventListeners = () => {
  */
 const deleteRule = (target) => {
     // Get all form data.
-    const { contextid, penaltyRules, finalPenaltyRule } = buildFormParams();
+    const {contextid, penaltyRules, finalPenaltyRule} = buildFormParams();
     const ruleNumber = getRuleNumber(target);
 
     // Remove the penalty rule.
@@ -114,7 +114,7 @@ const insertRule = (target) => insertRuleAtIndex(getRuleNumber(target) + 1);
  */
 const insertRuleAtIndex = (ruleNumber) => {
     // Get all form data.
-    const { contextid, penaltyRules, finalPenaltyRule } = buildFormParams();
+    const {contextid, penaltyRules, finalPenaltyRule} = buildFormParams();
 
     // Insert a new penalty rule.
     penaltyRules.splice(ruleNumber, 0, new PenaltyRule());
@@ -238,6 +238,7 @@ const loadPenaltyRuleForm = (
             if (deleteAllButton) {
                 deleteAllButton.disabled = false;
             }
+            return;
         })
         .catch(notification.exception);
 

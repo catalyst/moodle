@@ -31,6 +31,7 @@ use gradepenalty_duedate\tests\penalty_testcase;
  * @package   gradepenalty_duedate
  * @copyright 2024 Catalyst IT Australia Pty Ltd
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @covers \gradepenalty_duedate\penalty_calculator
  */
 final class penalty_calculator_test extends penalty_testcase {
     /**
@@ -67,9 +68,9 @@ final class penalty_calculator_test extends penalty_testcase {
      *
      * @dataProvider calculate_penalty_provider
      *
-     * @covers penalty_calculator::find_effective_penalty_rules
-     * @covers penalty_calculator::calculate_penalty
-     * @covers penalty_calculator::get_penalty_from_rules
+     * @covers \gradepenalty_duedate\penalty_calculator::find_effective_penalty_rules
+     * @covers \gradepenalty_duedate\penalty_calculator::calculate_penalty
+     * @covers \gradepenalty_duedate\penalty_calculator::get_penalty_from_rules
      *
      * @param int $submissiondate The submission date.
      * @param int $duedate The due date.
@@ -114,8 +115,8 @@ final class penalty_calculator_test extends penalty_testcase {
     /**
      * Rules set at different contexts.
      *
-     * @covers penalty_calculator::find_effective_penalty_rules
-     * @covers penalty_calculator::get_penalty_from_rules
+     * @covers \gradepenalty_duedate\penalty_calculator::find_effective_penalty_rules
+     * @covers \gradepenalty_duedate\penalty_calculator::get_penalty_from_rules
      */
     public function test_find_effective_penalty_rules(): void {
         global $DB;

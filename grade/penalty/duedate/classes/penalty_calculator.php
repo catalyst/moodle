@@ -25,7 +25,7 @@ use core_grades\penalty_container;
 /**
  * Penalty plugins must override this class to implement their own penalty calculation.
  *
- * @package   core_grades
+ * @package   gradepenalty_duedate
  * @copyright 2024 Catalyst IT Australia Pty Ltd
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */

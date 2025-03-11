@@ -25,12 +25,13 @@ use grade_item;
  * @package   core_grades
  * @copyright 2024 Catalyst IT Australia Pty Ltd
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @covers \core_grades\penalty_manager
  */
 final class penalty_manager_test extends advanced_testcase {
     /**
      * Test is_penalty_enabled_for_module method.
      *
-     * @covers penalty_manager::is_penalty_enabled_for_module
+     * @covers \core_grades\penalty_manager::is_penalty_enabled_for_module
      */
     public function test_is_penalty_enabled_for_module(): void {
         $this->resetAfterTest();
@@ -68,7 +69,7 @@ final class penalty_manager_test extends advanced_testcase {
     /**
      * Test apply_grade_penalty_to_user method.
      *
-     * @covers penalty_manager::apply_grade_penalty_to_user
+     * @covers \core_grades\penalty_manager::apply_grade_penalty_to_user
      */
     public function test_apply_grade_penalty_to_user(): void {
         $this->resetAfterTest();

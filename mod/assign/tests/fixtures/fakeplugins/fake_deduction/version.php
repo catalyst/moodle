@@ -18,8 +18,8 @@
  * Fake component for testing
  *
  * @package    mod_assign
- * * @copyright  2024 Catalyst IT Australia Pty Ltd
- * * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2024 Catalyst IT Australia Pty Ltd
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();

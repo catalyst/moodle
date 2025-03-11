@@ -35,7 +35,7 @@ final class penalty_container {
      * Constructor for the class.
      *
      * @param grade_item $gradeitem The grade item object
-     * @param grade_grade $grade The grade object
+     * @param grade_grade $gradegrade The grade object
      * @param int $submissiondate The date and time the submission was made
      * @param int $duedate The date and time the activity is due
      */

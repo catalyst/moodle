@@ -1,6 +1,4 @@
 <?php
-
-use core_grades\penalty_manager;
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -26,6 +24,8 @@ use core_grades\penalty_manager;
 
 require_once($CFG->dirroot . '/grade/report/lib.php');
 require_once($CFG->libdir.'/tablelib.php');
+
+use core_grades\penalty_manager;
 
 /**
  * Class providing an API for the grader report building and displaying.
