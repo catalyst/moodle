@@ -36,7 +36,7 @@ use stdClass;
  */
 class penalty_manager {
     /**
-     * Lists of modules which support grade penalty feature.
+     * List the modules that support the grade penalty feature.
      *
      * @return array list of supported modules.
      */
@@ -53,18 +53,72 @@ class penalty_manager {
     }
 
     /**
-     * Whether penalty is enabled for a module.
+     * List the modules that currently have the grade penalty feature enabled.
      *
-     * @param string $module the module name.
-     * @return bool if penalty is enabled for the module.
+     * @return array List of enabled modules.
+     */
+    public static function get_enabled_modules(): array {
+        return explode(',', get_config('core', 'gradepenalty_supportedplugins'));
+    }
+
+    /**
+     * Check if the module has the grade penalty feature enabled.
+     *
+     * @param string $module The module name (e.g. 'assign').
+     * @return bool Whether grade penalties are enabled for the module.
      */
     public static function is_penalty_enabled_for_module(string $module): bool {
-        // Check if the module is in the enable list.
-        $supportedmodules = get_config('core', 'gradepenalty_supportedplugins');
-        if (!in_array($module, explode(',', $supportedmodules))) {
+        return in_array($module, self::get_enabled_modules());
+    }
+
+    private static function is_penalty_enabled_for_grade(grade_grade $grade): bool {
+        if (empty($grade)) {
             return false;
         }
+
+        $grademin = $grade->get_grade_min();
+
+        // No penalty for minimum grades.
+        if ($grade->rawgrade <= $grademin) {
+            return false;
+        }
+
+        if ($grade->finalgrade <= $grademin) {
+            return false;
+        }
+
+        // No penalty for overridden grades.
+        // We may need a separate setting to allow grade penalties for overridden grades.
+        if (!empty($grade->overridden)) {
+            return false;
+        }
+
+        // No penalty for locked grades.
+        if (!empty($grade->locked)) {
+            return false;
+        }
+
         return true;
+    }
+
+    /**
+     * Calculate grade penalties for a user and their grade via the enabled penalty plugins.
+     *
+     * @param penalty_container $container The penalty container.
+     * @return penalty_container The penalty container with the calculated penalties.
+     */
+    private static function calculate_penalties(penalty_container $container): penalty_container {
+        // Iterate through all the penalty plugins to calculate the total penalty.
+        foreach (core_plugin_manager::instance()->get_plugins_of_type('gradepenalty') as $pluginname => $plugin) {
+            if (gradepenalty::is_plugin_enabled($pluginname)) {
+                $classname = "\\gradepenalty_{$pluginname}\\penalty_calculator";
+                if (class_exists($classname)) {
+                    $classname::calculate_penalty($container);
+                }
+            }
+        }
+        // Returning the container is not strictly necessary but makes it clear the container is being modified.
+        return $container;
     }
 
     /**
@@ -99,12 +153,12 @@ class penalty_manager {
     /**
      * Fetch the penalty for a user based on the submission date and due date and deduct marks from the grade item accordingly.
      *
-     * @param int $userid ID of user
-     * @param grade_item $gradeitem the grade item object
-     * @param int $submissiondate submission date
-     * @param int $duedate due date
-     * @param bool $previewonly do not update the grade if true
-     * @return penalty_container The penalty container.
+     * @param int $userid The user ID.
+     * @param grade_item $gradeitem The grade item.
+     * @param int $submissiondate The date and time of the user submission.
+     * @param int $duedate The date and time the submission is due.
+     * @param bool $previewonly If true, the grade will not be updated.
+     * @return penalty_container The penalty container containing information about the applied penalty.
      */
     private static function apply_penalty(
         int $userid,
@@ -113,43 +167,27 @@ class penalty_manager {
         int $duedate,
         bool $previewonly = false
     ): penalty_container {
-        // Fetch the grade and create a penalty container.
+
+        // Get the grade and create a penalty container.
         $grade = $gradeitem->get_grade($userid);
         $container = new penalty_container($gradeitem, $grade, $submissiondate, $duedate);
 
-        // Check if grade penalties are enabled for the module.
+        // Do not apply penalties if the module is disabled.
         if (!self::is_penalty_enabled_for_module($gradeitem->itemmodule)) {
             return $container;
         }
 
-        // Check if the grade is empty or negative.
-        if (!$grade || !$grade->rawgrade) {
-            debugging('No raw grade found for user ' . $userid . ' and grade item ' . $gradeitem->id, DEBUG_DEVELOPER);
-            return $container;
-
-        } else if ($grade->rawgrade <= 0 || $grade->finalgrade <= 0) {
-            // There is no penalty for zero or negative grades.
-            return $container;
-
-        } else if ($grade->overridden > 0 || $grade->locked > 0) {
-            // We may need a separate setting to allow penalty for overridden grades.
-            // Do not apply penalty if the grade is overridden or locked.
+        // Do not apply penalties if the grade is not eligible.
+        if (!self::is_penalty_enabled_for_grade($grade)) {
             return $container;
         }
 
-        // Iterate through all the penalty plugins to calculate the penalty.
-        foreach (core_plugin_manager::instance()->get_plugins_of_type('gradepenalty') as $pluginname => $plugin) {
-            if (gradepenalty::is_plugin_enabled($pluginname)) {
-                $classname = "\\gradepenalty_{$pluginname}\\penalty_calculator";
-                if (class_exists($classname)) {
-                    $classname::calculate_penalty($container);
-                }
-            }
-        }
+        // Call all penalty plugins to calculate the penalty.
+        $container = self::calculate_penalties($container);
 
-        // Apply the penalty to the grade.
+        // Update the grade if not in preview mode.
         if (!$previewonly) {
-            // Update the final grade after the penalty is applied.
+            // Update the raw grade and store the deducted mark.
             $gradeitem->update_raw_grade($userid, $container->get_grade_after_penalties(), 'gradepenalty');
             $gradeitem->update_deducted_mark($userid, $container->get_penalty());
         }
