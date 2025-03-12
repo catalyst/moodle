@@ -14,42 +14,43 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace mod_assign\hook;
+namespace mod_assign;
 
-use core_grades\hook\before_penalty_recalculation;
+use core\context;
 use mod_assign\task\recalculate_penalties;
 
 /**
- * Hook callbacks.
+ * Recalculate penalties for the assignment.
  *
- * @package    mod_assign
- * @copyright  2024 Catalyst IT Australia
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @package   mod_assign
+ * @copyright 2025 Catalyst IT Australia Pty Ltd
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class hook_callbacks {
+class penalty_recalculator extends \core_grades\penalty_recalculator {
 
     /**
-     * Callback for before_penalty_recalculation.
+     * Recalculate penalties for the assignment.
      *
-     * @param before_penalty_recalculation $hook
+     * @param context $context the context where the penalty is being recalculated.
+     * @param int $usermodified the user who triggered the recalculation.
      * @return void
      */
-    public static function extend_penalty_recalculation(before_penalty_recalculation $hook): void {
+    public static function recalculate_penalty(context $context, int $usermodified): void  {
         global $CFG, $DB;
 
         require_once($CFG->dirroot . '/mod/assign/locallib.php');
 
-        switch ($hook->context->contextlevel) {
+        switch ($context->contextlevel) {
             case CONTEXT_MODULE:
-                $cmid = $hook->context->instanceid;
+                $cmid = $context->instanceid;
                 $cm = get_coursemodule_from_id('assign', $cmid, 0, false, MUST_EXIST);
-                recalculate_penalties::queue($cm->instance, $hook->usermodified);
+                recalculate_penalties::queue($cm->instance, $usermodified);
                 break;
             case CONTEXT_COURSE:
-                $courseid = $hook->context->instanceid;
+                $courseid = $context->instanceid;
                 $assigns = $DB->get_records('assign', ['course' => $courseid]);
                 foreach ($assigns as $assign) {
-                    recalculate_penalties::queue($assign->id, $hook->usermodified);
+                    recalculate_penalties::queue($assign->id, $usermodified);
                 }
                 break;
         }

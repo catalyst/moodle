@@ -317,4 +317,38 @@ class penalty_manager {
             $penaltynav->remove();
         }
     }
+
+    /**
+     * Recalculate grade penalties
+     *
+     * @param context $context The context
+     * @param int $usermodified The user who triggered the recalculation
+     * return void
+     */
+    public static function recalculate_penalty(context $context, int $usermodified = 0): void {
+        if ($usermodified == 0) {
+            global $USER;
+            $usermodified = $USER->id;
+        }
+
+        // Get enabled modules.
+        $enabledmodules = self::get_enabled_modules();
+
+        foreach ($enabledmodules as $module) {
+            // If it is in a module context, make sure the module is the same as the enabled module.
+            if ($context->contextlevel == CONTEXT_MODULE) {
+                $cmid = $context->instanceid;
+                $cm = get_coursemodule_from_id($module, $cmid);
+                if (empty($cm)) {
+                    continue;
+                }
+            }
+
+            // Check if the module supports has penalty recalculator class.
+            $classname = "\\mod_{$module}\\penalty_recalculator";
+            if (class_exists($classname)) {
+                $classname::recalculate_penalty($context, $usermodified);
+            }
+        }
+    }
 }

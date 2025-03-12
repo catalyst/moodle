@@ -25,7 +25,6 @@
 
 require_once(__DIR__ . '/../../config.php');
 
-use core_grades\hook\before_penalty_recalculation;
 use core\output\notification;
 use core\url;
 
@@ -72,9 +71,7 @@ if ($recalculate) {
     die;
 
 } else if (optional_param('recalculateconfirm', 0, PARAM_INT) && confirm_sesskey()) {
-    // Create and dispatch the recalculation event.
-    $hook = new before_penalty_recalculation($context);
-    \core\di::get(\core\hook\manager::class)->dispatch($hook);
+    \core_grades\penalty_manager::recalculate_penalty($context);
     redirect($url, get_string('recalculatepenaltysuccess', 'core_grades'), 0, notification::NOTIFY_SUCCESS);
 }
 
