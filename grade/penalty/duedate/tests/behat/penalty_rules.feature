@@ -9,10 +9,6 @@ Feature: As an administrator
     And the following "courses" exist:
       | fullname | shortname | format |
       | Course 1 | C1        | topics |
-    And I navigate to "Grades > General settings" in site administration
-    And I click on "Grade penalty" "checkbox"
-    And I click on "Save changes" "button"
-    Then I should see "Changes saved"
     And I navigate to "Grades > Grade penalties > Manage penalty plugins" in site administration
     And I click on "Enable Late submission penalties" "checkbox"
     And I reload the page
@@ -83,7 +79,7 @@ Feature: As an administrator
     And I click on "Save changes" "button"
     # Override penalty rules at a course context.
     When I am on "Course 1" course homepage
-    And I navigate to "Penalty rules" in current page administration
+    And I navigate to "Grade penalties > Penalty rules" in current page administration
     Then I should see "10%" in the "≤ 1 day" "table_row"
     Then I should see "20%" in the "≤ 2 days" "table_row"
     Then I should see "30%" in the "≤ 3 days" "table_row"
