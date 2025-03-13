@@ -16,6 +16,8 @@
 
 namespace gradepenalty_duedate\output\form;
 
+use MoodleQuickForm;
+
 defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->libdir . '/formslib.php');
@@ -87,55 +89,9 @@ class edit_penalty_form extends moodleform {
 
         // Rule group repeater. Show default of 5 rules if there is no rule.
         $repeatcount = !is_null($finalpenaltyrule) ? count($repeatedrules) : 0;
-        $elements = [];
-        $options = [];
 
-        // Overdue.
-        $elements[] = $mform->createElement('static', '', '', get_string('overdueby_label', 'gradepenalty_duedate'));
-        $elements[] = $mform->createElement('static', '', '', '&le;');
-        $elements[] = $mform->createElement('duration', 'overdueby',
-            get_string('overdueby_label', 'gradepenalty_duedate'),
-            ['optional' => false, 'defaultunit' => DAYSECS]);
-        $options['overdueby']['type'] = PARAM_INT;
-        $options['overdueby']['default'] = DAYSECS;
-
-        // Penalty.
-        $elements[] = $mform->createElement('static', '', '', get_string('penalty_label', 'gradepenalty_duedate'));
-        $elements[] = $mform->createElement('text', 'penalty',
-            get_string('penalty_label', 'gradepenalty_duedate'), 'maxlength="5" size="5"');
-        $options['penalty']['type'] = PARAM_FLOAT;
-        $options['penalty']['default'] = 1;
-        $percenttext = html_writer::start_tag('span', ['class' => 'percent mr-6']);
-        $percenttext .= get_string('percentshort', 'core_grades');
-        $percenttext .= html_writer::end_tag('span');
-        $elements[] = $mform->createElement('static', '', '', $percenttext);
-
-        // Action menu.
-        $output = $PAGE->get_renderer('core');
-        $menu = new action_menu();
-        $menu->set_kebab_trigger();
-        // Add insert item.
-        $menu->add(new action_menu_link(
-            new url('#'),
-            new pix_icon('t/add', ''),
-            get_string('insertrule', 'gradepenalty_duedate'),
-            false,
-            ['class' => 'insertbelow']
-        ));
-        // Add delete item.
-        $menu->add(new action_menu_link(
-            new url('#'),
-            new pix_icon('i/trash', ''),
-            get_string('delete'),
-            false,
-            ['class' => 'deleterulebuttons text-danger']
-        ));
-        $actionmenu = $output->render($menu);
-        $elements[] = $mform->createElement('static', 'name1', 'name2', $actionmenu);
-
-        // Put them in a group.
-        $group = $mform->createElement('group', 'rulegroup',
-            get_string('penaltyrule_group', 'gradepenalty_duedate'), $elements, ['&nbsp;'], false);
+        // Create rule element.
+        [$group, $options] = self::rule_element($mform);
 
         // Create repeatable elements.
         $this->repeat_elements([$group], $repeatcount, $options, 'rulegroupcount', 'addrules', 0);
@@ -320,5 +276,70 @@ class edit_penalty_form extends moodleform {
                 $rules[$i]->delete();
             }
         }
+    }
+
+    /**
+     * Create the rule element.
+     *
+     * @param MoodleQuickForm $mform The form object.
+     * @return array The rule element and options.
+     */
+    private static function rule_element(MoodleQuickForm $mform): array {
+        global $PAGE;
+
+        $elements = [];
+        $options = [];
+
+        // Overdue.
+        $elements[] = $mform->createElement('static', '', '',
+            html_writer::span(get_string('overdueby_label', 'gradepenalty_duedate'), 'me-2'));
+
+        // ≤.
+        $elements[] = $mform->createElement('static', '', '', html_writer::span('≤', 'me-2'));
+
+        // Duration value element.
+        $elements[] = ($mform->createElement('duration', 'overdueby',
+            get_string('overdueby_label', 'gradepenalty_duedate'), ['optional' => false, 'defaultunit' => DAYSECS]));
+
+        // Penalty.
+        $elements[] = $mform->createElement('static', '', '',
+            html_writer::span(get_string('penalty_label', 'gradepenalty_duedate'), 'ms-4 me-2'));
+
+        // Penalty value element.
+        $elements[] = $mform->createElement('text', 'penalty',
+            get_string('penalty_label', 'gradepenalty_duedate'), ['size' => 3, 'maxlength' => 3]);
+        $options['penalty']['type'] = PARAM_FLOAT;
+
+        // %.
+        $elements[] = $mform->createElement('static', '', '', html_writer::span('%', 'me-4'));
+
+        // Action menu.
+        $output = $PAGE->get_renderer('core');
+        $menu = new action_menu();
+        $menu->set_kebab_trigger();
+
+        // Insert below button.
+        $menu->add(new action_menu_link(
+            new url('#'),
+            new pix_icon('t/add', ''),
+            get_string('insertrule', 'gradepenalty_duedate'),
+            false,
+            ['class' => 'insertbelow']
+        ));
+
+        // Delete button.
+        $menu->add(new action_menu_link(
+            new url('#'),
+            new pix_icon('i/trash', ''),
+            get_string('delete'),
+            false,
+            ['class' => 'deleterulebuttons text-danger']
+        ));
+        $actionmenu = $output->render($menu);
+        $elements[] = $mform->createElement('static', 'name1', 'name2', $actionmenu);
+
+        // Group.
+        return [$mform->createElement('group', 'rulegroup',
+            get_string('penaltyrule_group', 'gradepenalty_duedate'), $elements, [''], false), $options];
     }
 }
