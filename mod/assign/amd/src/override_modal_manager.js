@@ -37,7 +37,7 @@ const SELECTORS = {
  * @param {boolean} showRecalculationCheckBox Whether to show the recalculation checkbox.
  */
 export const init = (mode, showRecalculationCheckBox) => {
-    document.querySelector(SELECTORS.PARENT_CONTAINER).addEventListener('click', async (event) => {
+    document.querySelector(SELECTORS.PARENT_CONTAINER).addEventListener('click', async(event) => {
         const button = event.target.closest(SELECTORS.DELETE_BUTTONS);
 
         if (!button) {
@@ -72,7 +72,7 @@ export const init = (mode, showRecalculationCheckBox) => {
  * @param {boolean} name The name of the user or group.
  * @returns {Promise<string>} The confirm message.
  */
-const getConfirmMessage = async (mode, name) => {
+const getConfirmMessage = async(mode, name) => {
     switch (mode) {
         case "group":
             return await getString('overridedeletegroupsure', 'assign', name);
