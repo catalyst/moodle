@@ -19,6 +19,7 @@ namespace core_grades\output;
 use core\output\renderer_base;
 use core\output\templatable;
 use core\output\renderable;
+use grade_grade;
 
 /**
  * The base class for the action bar in the gradebook pages.
@@ -32,16 +33,25 @@ class penalty_indicator implements templatable, renderable {
      * The class constructor.
      *
      * @param int $decimals the decimal places
-     * @param \grade_grade $grade user grade
+     * @param grade_grade $grade user grade
      * @param bool $showfinalgrade whether to show the final grade (or show icon only)
      * @param bool $showgrademax whether to show the max grade
      * @param array|null $penaltyicon icon to show if penalty is applied
      */
     public function __construct(
+        /** @var int $decimals the decimal places */
         protected int $decimals,
-        protected \grade_grade $grade,
+
+        /** @var grade_grade $grade user grade */
+        protected grade_grade $grade,
+
+        /** @var bool $showfinalgrade whether to show the final grade (or show icon only) */
         protected bool $showfinalgrade = false,
+
+        /** @var bool $showgrademax whether to show the max grade */
         protected bool $showgrademax = false,
+
+        /** @var array|null $penaltyicon icon to show if penalty is applied */
         protected ?array $penaltyicon = null
     ) {
     }
