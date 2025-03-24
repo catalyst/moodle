@@ -30,14 +30,21 @@ if ($hassiteconfig) {
     // New category for the plugin.
     $ADMIN->add('gradepenalty', new admin_category('gradepenalty_duedate', new lang_string('pluginname', 'gradepenalty_duedate')));
 
-    // External page to manage the duedate rules.
+    // Add external page to manage the duedate rules.
     $temp = new admin_externalpage(
         'duedaterule',
         get_string('duedaterule', 'gradepenalty_duedate'),
         new url('/grade/penalty/duedate/manage_penalty_rule.php', ['contextid' => context_system::instance()->id]),
         'gradepenalty/duedate:manage'
     );
+    $ADMIN->add('gradepenalty_duedate', $temp);
 
-    // Add the external page to the plugin category.
+    // Add external page to manage exemptions.
+    $temp = new admin_externalpage(
+        'duedatemanageexemptions',
+        get_string('manage_exemptions', 'gradepenalty_duedate'),
+        new url('/grade/penalty/duedate/manage_exemptions.php', ['contextid' => context_system::instance()->id]),
+        'gradepenalty/duedate:manage'
+    );
     $ADMIN->add('gradepenalty_duedate', $temp);
 }
