@@ -107,7 +107,8 @@ final class penalty_container {
      * @return float The grade before penalties are applied
      */
     public function get_grade_before_penalties(): float {
-        return $this->gradegrade->finalgrade;
+        // The deducted mark is added to the final grade to get the grade before penalties.
+        return $this->gradegrade->finalgrade + $this->gradegrade->deductedmark;
     }
 
     /**
