@@ -3,6 +3,7 @@
 // This file defines settingpages and externalpages under the "grades" section
 
 use core\plugininfo\gradepenalty;
+use core\url;
 
 $ADMIN->add('grades', new admin_category('gradereports', new lang_string('reportsettings', 'grades')));
 $ADMIN->add('grades', new admin_category('gradeimports', new lang_string('importsettings', 'grades')));
@@ -250,6 +251,15 @@ if (has_capability('moodle/grade:manage', $systemcontext)
         get_string('managepenaltyplugins', 'grades'),
         new moodle_url('/grade/penalty/manage_penalty_plugins.php'),
         'moodle/grade:manage'
+    );
+    $ADMIN->add('gradepenalty', $temp);
+
+    // External page to manage exemptions.
+    $temp = new admin_externalpage(
+        'managepenaltyexemptions',
+        get_string('exemptions:manage', 'core_grades'),
+        new url('/grade/penalty/manage_exemptions.php', ['contextid' => context_system::instance()->id]),
+        'moodle/grade:viewpenaltyexemptions'
     );
     $ADMIN->add('gradepenalty', $temp);
 

@@ -1989,6 +1989,27 @@
         <KEY NAME="parent" TYPE="foreign" FIELDS="parent" REFTABLE="grade_categories" REFFIELDS="id"/>
       </KEYS>
     </TABLE>
+    <TABLE NAME="grade_penalty_exemptions" COMMENT="Stores the relationship between an arbitrary item (itemtype, itemid), and a context area (component, contextid). Used by the exemptions subsystem.">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="itemtype" TYPE="char" LENGTH="100" NOTNULL="true" SEQUENCE="false" COMMENT="Exemption type."/>
+        <FIELD NAME="itemid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Exemption type identifier."/>
+        <FIELD NAME="contextid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Exemption context."/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Creation time."/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Last modification time."/>
+        <FIELD NAME="usermodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="The id of the user who last modified the exemption."/>
+        <FIELD NAME="reason" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="The reason for the exemption."/>
+        <FIELD NAME="reasonformat" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="The format of the reason."/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="contextid" TYPE="foreign" FIELDS="contextid" REFTABLE="context" REFFIELDS="id"/>
+        <KEY NAME="usermodified" TYPE="foreign" FIELDS="usermodified" REFTABLE="user" REFFIELDS="id" COMMENT="Reference to the user who last modified the exemption."/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="uniqueexemption" UNIQUE="true" FIELDS="itemtype, itemid, contextid"/>
+      </INDEXES>
+    </TABLE>
     <TABLE NAME="grade_items" COMMENT="This table keeps information about gradeable items (ie columns). If an activity (eg an assignment or quiz) has multiple grade_items associated with it (eg several outcomes or numerical grades), then there will be a corresponding multiple number of rows in this table.">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>

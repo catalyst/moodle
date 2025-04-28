@@ -28,24 +28,41 @@ use mod_assign\task\recalculate_penalties;
  */
 class penalty_recalculator extends \core_grades\penalty_recalculator {
     #[\Override]
-    public static function recalculate_penalty(context $context, int $usermodified): void {
+    public static function recalculate_penalty(context $context, ?array $userids, int $usermodified): void {
         global $CFG, $DB;
 
         require_once($CFG->dirroot . '/mod/assign/locallib.php');
 
         switch ($context->contextlevel) {
             case CONTEXT_MODULE:
+                // Queue a task for the assignment.
                 $cmid = $context->instanceid;
                 $cm = get_coursemodule_from_id('assign', $cmid, 0, false, MUST_EXIST);
-                recalculate_penalties::queue($cm->instance, $usermodified);
+                recalculate_penalties::queue([$cm->instance], $userids, $usermodified);
                 break;
+
             case CONTEXT_COURSE:
+                // Queue a task for the course.
                 $courseid = $context->instanceid;
-                $assigns = $DB->get_records('assign', ['course' => $courseid]);
-                foreach ($assigns as $assign) {
-                    recalculate_penalties::queue($assign->id, $usermodified);
+                $assignids = $DB->get_fieldset('assign', 'id', ['course' => $courseid]);
+                recalculate_penalties::queue($assignids, $userids, $usermodified);
+                break;
+
+            case CONTEXT_SYSTEM:
+                // Queue a task for each course with at least one assignment.
+                $records = $DB->get_records('assign', null, '', 'id, course');
+                $courses = [];
+                foreach ($records as $id => $assign) {
+                    $courses[$assign->course][] = $id;
+                }
+
+                foreach ($courses as $assignids) {
+                    recalculate_penalties::queue($assignids, $userids, $usermodified);
                 }
                 break;
+
+            default:
+                throw new \coding_exception("Unsupported context level for assign penalty recalculation: {$context->contextlevel}");
         }
     }
 }

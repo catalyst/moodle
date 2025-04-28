@@ -1732,6 +1732,29 @@ $capabilities = array(
         'clonepermissionsfrom' => 'moodle/course:managegrades'
     ),
 
+    'moodle/grade:managepenaltyexemptions' => [
+        'riskbitmask' => RISK_PERSONAL | RISK_XSS,
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_COURSE,
+        'archetypes' => [
+            'editingteacher' => CAP_ALLOW,
+            'manager' => CAP_ALLOW,
+        ],
+        'clonepermissionsfrom' => 'moodle/grade:manage',
+    ],
+
+    'moodle/grade:viewpenaltyexemptions' => [
+        'riskbitmask' => RISK_PERSONAL,
+        'captype' => 'read',
+        'contextlevel' => CONTEXT_COURSE,
+        'archetypes' => [
+            'teacher' => CAP_ALLOW,
+            'editingteacher' => CAP_ALLOW,
+            'manager' => CAP_ALLOW,
+        ],
+        'clonepermissionsfrom' => 'moodle/grade:viewall',
+    ],
+
     // ability to define advanced grading forms in activities either from scratch
     // or from a shared template
     'moodle/grade:managegradingforms' => array(

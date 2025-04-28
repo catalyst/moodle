@@ -3000,6 +3000,82 @@ class backup_activity_grades_structure_step extends backup_structure_step {
 }
 
 /**
+ * Structure step in charge of constructing the exemptions.xml file for all the exemptions.
+ */
+class backup_grade_penalty_exemptions_structure_step extends backup_structure_step {
+
+    /**
+     * Always execute this step, even if the course is the front page.
+     *
+     * @return bool
+     */
+    protected function execute_condition() {
+        return true;
+    }
+
+    /**
+     * Declares the exemptions.xml structure and data sources.
+     *
+     * @return backup_nested_element
+     */
+    protected function define_structure() {
+        // Whether the backup includes user info.
+        $userinfo = $this->setting_exists('userinfo') ? $this->get_setting_value('userinfo') : $this->get_setting_value('users');
+
+        // Define each element separated.
+        $exemptions = new backup_nested_element('grade_penalty_exemptions');
+        $userexemption = new backup_nested_element('user_penalty_exemption', ['id'], [
+            'itemtype',
+            'itemid',
+            'contextid',
+            'reason',
+            'reasonformat',
+            'timecreated',
+            'timemodified',
+            'usermodified',
+        ]);
+
+        $groupexemption = new backup_nested_element('group_penalty_exemption', ['id'], [
+            'itemtype',
+            'itemid',
+            'contextid',
+            'reason',
+            'reasonformat',
+            'timecreated',
+            'timemodified',
+            'usermodified',
+        ]);
+
+        // Build the tree.
+        $exemptions->add_child($userexemption);
+        $exemptions->add_child($groupexemption);
+
+        // Define sources.
+        if ($userinfo) {
+            $userexemption->set_source_table('grade_penalty_exemptions', [
+                'contextid' => backup::VAR_CONTEXTID,
+                'itemtype' => backup_helper::is_sqlparam(\core_grades\penalty_exemption::TYPE_USER),
+            ]);
+        }
+
+        $groupexemption->set_source_table('grade_penalty_exemptions', [
+            'contextid' => backup::VAR_CONTEXTID,
+            'itemtype' => backup_helper::is_sqlparam(\core_grades\penalty_exemption::TYPE_GROUP),
+        ]);
+
+        // Annotations.
+        $userexemption->annotate_ids('user', 'itemid');
+        $userexemption->annotate_ids('user', 'usermodified');
+
+        $groupexemption->annotate_ids('group', 'itemid');
+        $groupexemption->annotate_ids('user', 'usermodified');
+
+        // Return the root element.
+        return $exemptions;
+    }
+}
+
+/**
  * Structure step in charge of constructing the grade history of an activity.
  *
  * This step is added to the task regardless of the setting 'grade_histories'.

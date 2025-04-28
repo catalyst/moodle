@@ -24,6 +24,7 @@
  */
 
 namespace core_grades\privacy;
+
 defined('MOODLE_INTERNAL') || die();
 
 use context;
@@ -33,6 +34,7 @@ use grade_item;
 use grade_grade;
 use grade_scale;
 use stdClass;
+use core_grades\penalty_exemption;
 use core_grades\privacy\grade_grade_with_history;
 use core_privacy\local\metadata\collection;
 use core_privacy\local\request\approved_contextlist;
@@ -111,6 +113,15 @@ class provider implements
             'timemodified' => 'privacy:metadata:history:timemodified',
             'loggeduser' => 'privacy:metadata:history:loggeduser',
         ]), 'privacy:metadata:gradeshistory');
+
+        $collection->add_database_table('grade_penalty_exemptions', [
+            'itemid' => 'privacy:metadata:exemptions:itemid',
+            'timecreated' => 'privacy:metadata:exemptions:timecreated',
+            'timemodified' => 'privacy:metadata:exemptions:timemodified',
+            'usermodified' => 'privacy:metadata:exemptions:usermodified',
+            'reason' => 'privacy:metadata:exemptions:reason',
+            'reasonformat' => 'privacy:metadata:exemptions:reasonformat',
+        ], 'privacy:metadata:exemptions');
 
         // The following tables are reported but not exported/deleted because their data is temporary and only
         // used during an import. It's content is deleted after a successful, or failed, import.
@@ -308,6 +319,20 @@ class provider implements
         ];
         $contextlist->add_from_sql($sql, $params);
 
+        $sql = "
+            SELECT DISTINCT ctx.id
+              FROM {context} ctx
+              JOIN {grade_penalty_exemptions} gpe
+                ON gpe.contextid = ctx.id
+             WHERE gpe.itemid = :userid1 AND gpe.itemtype = :itemtype
+                OR gpe.usermodified = :userid2";
+        $params = [
+            'userid1' => $userid,
+            'userid2' => $userid,
+            'itemtype' => penalty_exemption::TYPE_USER,
+        ];
+        $contextlist->add_from_sql($sql, $params);
+
         return $contextlist;
     }
 
@@ -404,6 +429,24 @@ class provider implements
                        AND ggh.userid = :contextinstanceid";
             $userlist->add_from_sql('userid', $sql, ['contextinstanceid' => $context->instanceid]);
         }
+
+        $sql = "SELECT gpe.itemid
+                  FROM {grade_penalty_exemptions} gpe
+                 WHERE gpe.contextid = :contextid
+                   AND gpe.itemtype = :itemtype";
+        $params = [
+            'contextid' => $context->id,
+            'itemtype' => penalty_exemption::TYPE_USER,
+        ];
+        $userlist->add_from_sql('itemid', $sql, $params);
+
+        $sql = "SELECT gpe.usermodified
+                  FROM {grade_penalty_exemptions} gpe
+                 WHERE gpe.contextid = :contextid";
+        $params = [
+            'contextid' => $context->id,
+        ];
+        $userlist->add_from_sql('usermodified', $sql, $params);
     }
 
     /**
@@ -729,6 +772,37 @@ class provider implements
             writer::with_context($context)->export_related_data($relatedtomepath, 'grades_history',
                 (object) ['modified_records' => $data]);
         });
+
+        // Export exemptions.
+        [$insql, $inparams] = $DB->get_in_or_equal($contextlist->get_contextids(), SQL_PARAMS_NAMED);
+
+        $sql = "SELECT id, itemtype, itemid, contextid, reason, reasonformat, timecreated, timemodified, usermodified
+                  FROM {grade_penalty_exemptions}
+                 WHERE contextid $insql AND (itemtype = :itemtype AND itemid = :userid1 OR usermodified = :userid2)";
+
+        $params = array_merge($inparams, [
+            'itemtype' => penalty_exemption::TYPE_USER,
+            'userid1' => $userid,
+            'userid2' => $userid,
+        ]);
+
+        $recordset = $DB->get_recordset_sql($sql, $params);
+        static::recordset_loop_and_export($recordset, 'contextid', [], function ($carry, $record) use ($userid) {
+            $context = context::instance_by_id($record->contextid);
+            $carry[] = [
+                'reason' => format_text($record->reason, $record->reasonformat, ['context' => $context]),
+                'timecreated' => transform::datetime($record->timecreated),
+                'timemodified' => transform::datetime($record->timemodified),
+                'usermodified' => transform::user($record->usermodified),
+                'created_by_you' => transform::yesno($userid == $record->usermodified),
+            ];
+            return $carry;
+
+        }, function ($contextid, $data) use ($relatedtomepath) {
+            $context = context::instance_by_id($contextid);
+            writer::with_context($context)->export_related_data($relatedtomepath, 'exemptions',
+                (object) ['exemptions' => $data]);
+        });
     }
 
     /**
@@ -761,6 +835,7 @@ class provider implements
                 break;
         }
 
+        self::delete_exemptions(['contextid' => $context->id]);
     }
 
     /**
@@ -800,6 +875,16 @@ class provider implements
 
         $DB->delete_records_select('grade_grades', "itemid $insql AND userid = :userid", $params);
         $DB->delete_records_select('grade_grades_history', "itemid $insql AND userid = :userid", $params);
+
+        self::delete_exemptions([
+            'itemtype' => penalty_exemption::TYPE_USER,
+            'itemid' => $userid,
+            'contextid' => $contextlist->get_contextids(),
+        ]);
+        self::clean_exemptions([
+            'contextid' => $contextlist->get_contextids(),
+            'usermodified' => $userid,
+        ]);
     }
 
 
@@ -842,6 +927,16 @@ class provider implements
 
         $DB->delete_records_select('grade_grades', "itemid $itemsql AND userid $usersql", $params);
         $DB->delete_records_select('grade_grades_history', "itemid $itemsql AND userid $usersql", $params);
+
+        self::delete_exemptions([
+            'itemtype' => penalty_exemption::TYPE_USER,
+            'itemid' => $userids,
+            'contextid' => $context->id,
+        ]);
+        self::clean_exemptions([
+            'contextid' => $context->id,
+            'usermodified' => $userids,
+        ]);
     }
 
     /**
@@ -1325,5 +1420,31 @@ class provider implements
             $fs->delete_area_files($gg->get_context()->id, GRADE_FILE_COMPONENT, $filearea, $fileitemid);
         }
         $grades->close();
+    }
+
+    /**
+     * Delete exemptions for a given set of criteria.
+     *
+     * @param array $criteria The criteria to match against.
+     */
+    protected static function delete_exemptions(array $criteria): void {
+        foreach (penalty_exemption::find_by($criteria) as $exemption) {
+            $exemption->delete();
+        }
+    }
+
+    /**
+     * Clean exemptions for a given set of criteria.
+     *
+     * @param array $criteria The criteria to match against.
+     */
+    protected static function clean_exemptions(array $criteria): void {
+        if (!isset($criteria['usermodified'])) {
+            throw new \coding_exception('Missing usermodified criteria');
+        }
+        foreach (penalty_exemption::find_by($criteria) as $exemption) {
+            $exemption->set_reason(null, null);
+            $exemption->save(0);
+        }
     }
 }

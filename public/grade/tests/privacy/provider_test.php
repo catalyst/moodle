@@ -32,6 +32,7 @@ use core_privacy\tests\provider_testcase;
 use core_privacy\local\request\approved_contextlist;
 use core_privacy\local\request\transform;
 use core_privacy\local\request\writer;
+use core_grades\penalty_exemption;
 use core_grades\privacy\provider;
 
 require_once($CFG->libdir . '/gradelib.php');
@@ -464,6 +465,9 @@ final class provider_test extends provider_testcase {
             ]
         ), false);
 
+        penalty_exemption::exempt_user($u1->id, $c2ctx->id);
+        penalty_exemption::exempt_user($u2->id, $c2ctx->id);
+
         $this->add_feedback_file_to_copy();
 
         $grades['feedback'] = 'Nice feedback!';
@@ -503,6 +507,8 @@ final class provider_test extends provider_testcase {
         grade_update('mod/assign', $gi2b->courseid, $gi2b->itemtype, $gi2b->itemmodule, $gi2b->iteminstance,
             $gi2b->itemnumber, $grades);
         $gi2b->delete();
+
+        $this->assertEquals(2, penalty_exemption::count_by(['contextid' => $c2ctx->id]));
 
         // Feedback file area.
         $files = $fs->get_area_files($a1context->id, GRADE_FILE_COMPONENT, GRADE_FEEDBACK_FILEAREA);
@@ -618,6 +624,8 @@ final class provider_test extends provider_testcase {
         $this->assertFalse($DB->record_exists('grade_grades', ['userid' => $u2->id, 'itemid' => $gi2a->id]));
         $this->assertTrue($DB->record_exists('grade_grades_history', ['userid' => $u2->id, 'itemid' => $gi2b->id]));
 
+        $this->assertEquals(0, penalty_exemption::count_by(['contextid' => $c2ctx->id]));
+
         // Feedback file area.
         $files = $fs->get_area_files($a1context->id, GRADE_FILE_COMPONENT, GRADE_FEEDBACK_FILEAREA);
         $this->assertEquals(0, count($files));
@@ -705,6 +713,9 @@ final class provider_test extends provider_testcase {
             ]
         ), false);
 
+        penalty_exemption::exempt_user($u1->id, $c1ctx->id);
+        penalty_exemption::exempt_user($u1->id, $c2ctx->id);
+
         $this->add_feedback_file_to_copy();
 
         $grades['feedback'] = 'Nice feedback!';
@@ -752,6 +763,16 @@ final class provider_test extends provider_testcase {
         $this->assertTrue($DB->record_exists('grade_grades', ['userid' => $u2->id, 'itemid' => $gi2a->id]));
         $this->assertTrue($DB->record_exists('grade_grades_history', ['userid' => $u1->id, 'itemid' => $gi2b->id]));
         $this->assertTrue($DB->record_exists('grade_grades_history', ['userid' => $u2->id, 'itemid' => $gi2b->id]));
+        $this->assertEquals(1, penalty_exemption::count_by([
+            'itemtype' => penalty_exemption::TYPE_USER,
+            'itemid' => $u1->id,
+            'contextid' => $c1ctx->id,
+        ]));
+        $this->assertEquals(1, penalty_exemption::count_by([
+            'itemtype' => penalty_exemption::TYPE_USER,
+            'itemid' => $u1->id,
+            'contextid' => $c2ctx->id,
+        ]));
 
         // Feedback file area.
         $files = $fs->get_area_files($a1context->id, GRADE_FILE_COMPONENT, GRADE_FEEDBACK_FILEAREA);
@@ -789,6 +810,16 @@ final class provider_test extends provider_testcase {
         $this->assertTrue($DB->record_exists('grade_grades', ['userid' => $u2->id, 'itemid' => $gi2a->id]));
         $this->assertTrue($DB->record_exists('grade_grades_history', ['userid' => $u1->id, 'itemid' => $gi2b->id]));
         $this->assertTrue($DB->record_exists('grade_grades_history', ['userid' => $u2->id, 'itemid' => $gi2b->id]));
+        $this->assertEquals(0, penalty_exemption::count_by([
+            'itemtype' => penalty_exemption::TYPE_USER,
+            'itemid' => $u1->id,
+            'contextid' => $c1ctx->id,
+        ]));
+        $this->assertEquals(1, penalty_exemption::count_by([
+            'itemtype' => penalty_exemption::TYPE_USER,
+            'itemid' => $u1->id,
+            'contextid' => $c2ctx->id,
+        ]));
 
         // Feedback file area.
         $files = $fs->get_area_files($a1context->id, GRADE_FILE_COMPONENT, GRADE_FEEDBACK_FILEAREA);
@@ -826,6 +857,16 @@ final class provider_test extends provider_testcase {
         $this->assertTrue($DB->record_exists('grade_grades', ['userid' => $u2->id, 'itemid' => $gi2a->id]));
         $this->assertFalse($DB->record_exists('grade_grades_history', ['userid' => $u1->id, 'itemid' => $gi2b->id]));
         $this->assertTrue($DB->record_exists('grade_grades_history', ['userid' => $u2->id, 'itemid' => $gi2b->id]));
+        $this->assertEquals(0, penalty_exemption::count_by([
+            'itemtype' => penalty_exemption::TYPE_USER,
+            'itemid' => $u1->id,
+            'contextid' => $c1ctx->id,
+        ]));
+        $this->assertEquals(1, penalty_exemption::count_by([
+            'itemtype' => penalty_exemption::TYPE_USER,
+            'itemid' => $u1->id,
+            'contextid' => $c2ctx->id,
+        ]));
 
         // Feedback file area.
         $files = $fs->get_area_files($a1context->id, GRADE_FILE_COMPONENT, GRADE_FEEDBACK_FILEAREA);
@@ -863,6 +904,16 @@ final class provider_test extends provider_testcase {
         $this->assertTrue($DB->record_exists('grade_grades', ['userid' => $u2->id, 'itemid' => $gi2a->id]));
         $this->assertFalse($DB->record_exists('grade_grades_history', ['userid' => $u1->id, 'itemid' => $gi2b->id]));
         $this->assertTrue($DB->record_exists('grade_grades_history', ['userid' => $u2->id, 'itemid' => $gi2b->id]));
+        $this->assertEquals(0, penalty_exemption::count_by([
+            'itemtype' => penalty_exemption::TYPE_USER,
+            'itemid' => $u1->id,
+            'contextid' => $c1ctx->id,
+        ]));
+        $this->assertEquals(0, penalty_exemption::count_by([
+            'itemtype' => penalty_exemption::TYPE_USER,
+            'itemid' => $u1->id,
+            'contextid' => $c2ctx->id,
+        ]));
 
         // Feedback file area.
         $files = $fs->get_area_files($a1context->id, GRADE_FILE_COMPONENT, GRADE_FEEDBACK_FILEAREA);
@@ -930,6 +981,11 @@ final class provider_test extends provider_testcase {
         $gi2b->update_final_grade($u3->id, 1, 'test');
         $gi2b->delete();
 
+        penalty_exemption::exempt_user($u1->id, $c1ctx->id);
+        penalty_exemption::exempt_user($u2->id, $c2ctx->id);
+        $ex3 = penalty_exemption::exempt_user($u3->id, $c2ctx->id);
+        $ex3->save($u4->id);
+
         $this->assertTrue($DB->record_exists('grade_grades', ['userid' => $u1->id, 'itemid' => $gi1a->id]));
         $this->assertTrue($DB->record_exists('grade_grades', ['userid' => $u2->id, 'itemid' => $gi1a->id]));
         $this->assertTrue($DB->record_exists('grade_grades', ['userid' => $u3->id, 'itemid' => $gi1a->id]));
@@ -941,6 +997,13 @@ final class provider_test extends provider_testcase {
         $this->assertFalse($DB->record_exists('grade_grades', ['userid' => $u1->id, 'itemid' => $gi2b->id]));
         $this->assertFalse($DB->record_exists('grade_grades', ['userid' => $u2->id, 'itemid' => $gi2b->id]));
         $this->assertFalse($DB->record_exists('grade_grades', ['userid' => $u3->id, 'itemid' => $gi2b->id]));
+        $this->assertEquals(3, penalty_exemption::count_by([
+            'itemtype' => penalty_exemption::TYPE_USER,
+            'itemid' => [$u1->id, $u2->id, $u3->id, $u4->id],
+        ]));
+        $this->assertEquals(1, penalty_exemption::count_by([
+            'usermodified' => $u4->id,
+        ]));
 
         $userlist = new \core_privacy\local\request\approved_userlist($c1ctx, 'core_grades', [$u1->id, $u2->id]);
         provider::delete_data_for_users($userlist);
@@ -953,6 +1016,13 @@ final class provider_test extends provider_testcase {
         $this->assertTrue($DB->record_exists('grade_grades', ['userid' => $u1->id, 'itemid' => $gi2a->id]));
         $this->assertTrue($DB->record_exists('grade_grades', ['userid' => $u2->id, 'itemid' => $gi2a->id]));
         $this->assertTrue($DB->record_exists('grade_grades', ['userid' => $u4->id, 'itemid' => $gi2a->id]));
+        $this->assertEquals(2, penalty_exemption::count_by([
+            'itemtype' => penalty_exemption::TYPE_USER,
+            'itemid' => [$u1->id, $u2->id, $u3->id, $u4->id],
+        ]));
+        $this->assertEquals(1, penalty_exemption::count_by([
+            'usermodified' => $u4->id,
+        ]));
 
         $userlist = new \core_privacy\local\request\approved_userlist($c2ctx, 'core_grades', [$u2->id, $u4->id]);
         provider::delete_data_for_users($userlist);
@@ -965,6 +1035,13 @@ final class provider_test extends provider_testcase {
         $this->assertTrue($DB->record_exists('grade_grades', ['userid' => $u1->id, 'itemid' => $gi2a->id]));
         $this->assertFalse($DB->record_exists('grade_grades', ['userid' => $u2->id, 'itemid' => $gi2a->id]));
         $this->assertFalse($DB->record_exists('grade_grades', ['userid' => $u4->id, 'itemid' => $gi2a->id]));
+        $this->assertEquals(1, penalty_exemption::count_by([
+            'itemtype' => penalty_exemption::TYPE_USER,
+            'itemid' => [$u1->id, $u2->id, $u3->id, $u4->id],
+        ]));
+        $this->assertEquals(0, penalty_exemption::count_by([
+            'usermodified' => $u4->id,
+        ]));
     }
 
     public function test_export_data_for_user_about_grades_and_history(): void {

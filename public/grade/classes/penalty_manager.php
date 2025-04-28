@@ -18,6 +18,8 @@ namespace core_grades;
 
 use core\context;
 use core\plugininfo\gradepenalty;
+use core\url;
+use core_grades\penalty_exemption;
 use core_plugin_manager;
 use grade_grade;
 use grade_item;
@@ -226,6 +228,11 @@ class penalty_manager {
             return $container;
         }
 
+        // Do not apply penalties if the user is exempt.
+        if (penalty_exemption::is_user_exempt($userid, $gradeitem->get_context()->id)) {
+            return $container;
+        }
+
         // Call all penalty plugins to calculate the penalty.
         $container = self::calculate_penalties($container);
 
@@ -266,9 +273,7 @@ class penalty_manager {
      * @param stdClass $course The course object
      * @param context $coursecontext The course context
      */
-    public static function extend_navigation_course(navigation_node $navigation,
-                                                    stdClass $course,
-                                                    context $coursecontext): void {
+    public static function extend_navigation_course(navigation_node $navigation, stdClass $course, context $coursecontext): void {
         // Create new navigation node for grade penalty.
         $penaltynav = $navigation->add(get_string('gradepenalty', 'core_grades'),
             new moodle_url('/grade/penalty/view.php', ['contextid' => $coursecontext->id]),
@@ -280,6 +285,18 @@ class penalty_manager {
             if (gradepenalty::is_plugin_enabled($plugin)) {
                 $function($penaltynav, $course, $coursecontext);
             }
+        }
+
+        // Add exemptions management to navigation.
+        if (has_capability('moodle/grade:viewpenaltyexemptions', $coursecontext)) {
+            $url = new url('/grade/penalty/manage_exemptions.php', ['contextid' => $coursecontext->id]);
+            $penaltynav->add(
+                get_string('exemptions:manage', 'core_grades'),
+                $url,
+                navigation_node::TYPE_SETTING,
+                null,
+                'manageexemptions'
+            );
         }
 
         // Do not display the node if there are no children.
@@ -312,6 +329,18 @@ class penalty_manager {
             }
         }
 
+        // Add exemptions management to navigation.
+        if (has_capability('moodle/grade:viewpenaltyexemptions', $context)) {
+            $url = new url('/grade/penalty/manage_exemptions.php', ['contextid' => $context->id]);
+            $penaltynav->add(
+                get_string('exemptions:manage', 'core_grades'),
+                $url,
+                navigation_node::TYPE_SETTING,
+                null,
+                'manageexemptions'
+            );
+        }
+
         // Do not display the node if there are no children.
         if (!$penaltynav->has_children()) {
             $penaltynav->remove();
@@ -319,35 +348,36 @@ class penalty_manager {
     }
 
     /**
-     * Recalculate grade penalties
+     * Recalculate grade penalties.
      *
-     * @param context $context The context
-     * @param int $usermodified The user who triggered the recalculation
-     * return void
+     * @param context $context Limit the recalculation to this context and its children.
+     * @param int[]|null $userids Further limit the recalculation to these users.
+     *                            If null, all users in the context will be recalculated.
+     * @param int|null $usermodified The user who triggered the recalculation. If null, the current user will be used.
+     *
+     * @return void
      */
-    public static function recalculate_penalty(context $context, int $usermodified = 0): void {
-        if ($usermodified == 0) {
-            global $USER;
-            $usermodified = $USER->id;
+    public static function recalculate_penalty(context $context, ?array $userids = null, ?int $usermodified = null): void {
+        global $USER;
+
+        // Conditionally set usermodified to the current user if not provided.
+        $usermodified ??= $USER->id;
+
+        // Get all enabled modules that support grade penalties.
+        $modules = self::get_enabled_modules();
+
+        // If the context belongs to a module, limit the recalculation to that module type.
+        if ($context->contextlevel == CONTEXT_MODULE) {
+            $modinfo = get_fast_modinfo($context->get_course_context()->instanceid);
+            $modname = $modinfo->get_cm($context->instanceid)->modname;
+            $modules = in_array($modname, $modules) ? [$modname] : [];
         }
 
-        // Get enabled modules.
-        $enabledmodules = self::get_enabled_modules();
-
-        foreach ($enabledmodules as $module) {
-            // If it is in a module context, make sure the module is the same as the enabled module.
-            if ($context->contextlevel == CONTEXT_MODULE) {
-                $cmid = $context->instanceid;
-                $cm = get_coursemodule_from_id($module, $cmid);
-                if (empty($cm)) {
-                    continue;
-                }
-            }
-
-            // Check if the module supports has penalty recalculator class.
+        foreach ($modules as $module) {
+            // Check if the module has a penalty recalculator class.
             $classname = "\\mod_{$module}\\penalty_recalculator";
             if (class_exists($classname)) {
-                $classname::recalculate_penalty($context, $usermodified);
+                $classname::recalculate_penalty($context, $userids, $usermodified);
             }
         }
     }

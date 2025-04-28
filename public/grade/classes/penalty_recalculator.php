@@ -28,11 +28,15 @@ use core\context;
  */
 abstract class penalty_recalculator {
     /**
-     * Calculate the grade penalty based on the information provided in the penalty container.
-     * The result should be stored in the penalty container.
+     * Recalculate penalties for the given context.
+     * Activity plugins must update their grades with the latest penalty values.
      *
-     * @param context $context the context where the penalty is being recalculated.
-     * @param int $usermodified the user who triggered the recalculation.
+     * @param context $context Limit the recalculation to this context and its children.
+     * @param int[]|null $userids Further limit the recalculation to these users.
+     *                            If null, all users in the context will be recalculated.
+     * @param int $usermodified The user who triggered the recalculation.
+     *
+     * @return void
      */
-    abstract public static function recalculate_penalty(context $context, int $usermodified): void;
+    abstract public static function recalculate_penalty(context $context, ?array $userids, int $usermodified): void;
 }

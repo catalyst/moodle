@@ -310,4 +310,16 @@ class behat_grades extends behat_base {
         $this->execute("behat_general::i_click_on", [$this->escape($xpath), "xpath_element"]);
     }
 
+    /**
+     * Exempt a user from grade penalties.
+     *
+     * @Given /^I exempt user "([^"]*)" from grade penalties$/
+     * @param string $username The username of the user to exempt.
+     */
+    public function i_exempt_user_from_grade_penalties(string $username): void {
+        $userid = $this->get_user_id_by_identifier($username);
+        $context = context_system::instance();
+        \core_grades\penalty_exemption::exempt_user($userid, $context->id);
+    }
+
 }

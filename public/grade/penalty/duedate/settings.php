@@ -33,14 +33,12 @@ $capabilities = ['gradepenalty/duedate:manage'];
 
 if ($hassiteconfig || has_any_capability($capabilities, core\context\system::instance())) {
 
-    // External page to manage the duedate rules.
+    // Add external page to manage the duedate rules.
     $temp = new admin_externalpage(
         'duedaterule',
         get_string('duedaterule', 'gradepenalty_duedate'),
         new url('/grade/penalty/duedate/manage_penalty_rule.php', ['contextid' => context_system::instance()->id]),
         'gradepenalty/duedate:manage'
     );
-
-    // Add the external page to the plugin category.
     $ADMIN->add('gradepenalty_duedate', $temp);
 }

@@ -4211,6 +4211,111 @@ class restore_activity_grades_structure_step extends restore_structure_step {
 }
 
 /**
+ * Restore step for restoring grade penalty exemptions.
+ */
+class restore_grade_penalty_exemptions_structure_step extends restore_structure_step {
+
+    /**
+     * This step is executed only if the grade penalty exemptions file is present.
+     *
+     * @return bool
+     */
+    protected function execute_condition() {
+        // Check if the file is included in the backup.
+        $fullpath = $this->task->get_taskbasepath();
+        $fullpath = rtrim($fullpath, '/') . '/' . $this->filename;
+        if (!file_exists($fullpath)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Defines the structure.
+     *
+     * @return array
+     */
+    protected function define_structure() {
+
+        $userinfo = $this->setting_exists('userinfo') ? $this->get_setting_value('userinfo') : $this->get_setting_value('users');
+
+        $paths = [];
+        $paths[] = new restore_path_element('grade_penalty_exemptions', '/grade_penalty_exemptions');
+        if ($userinfo) {
+            $paths[] = new restore_path_element('user_penalty_exemption', '/grade_penalty_exemptions/user_penalty_exemption');
+        }
+        $paths[] = new restore_path_element('group_penalty_exemption', '/grade_penalty_exemptions/group_penalty_exemption');
+
+        return $paths;
+    }
+
+    /**
+     * Process the grade_penalty_exemptions element.
+     *
+     * @param array $data The element data.
+     */
+    protected function process_grade_penalty_exemptions($data) {
+    }
+
+    /**
+     * Process the user_penalty_exemption element.
+     * Exemptions are not restored if they already exist.
+     *
+     * @param array $data The exemption data.
+     */
+    protected function process_user_penalty_exemption($data) {
+        global $DB;
+
+        // Update the data to be processed.
+        $data = (object) $data;
+        $data->itemid = $this->get_mappingid('user', $data->itemid);
+        $data->contextid = $this->get_mappingid('context', $data->contextid);
+        $data->usermodified = $this->get_mappingid('user', $data->usermodified);
+        unset($data->id);
+
+        // Check if the exemption already exists.
+        $count = \core_grades\penalty_exemption::count_by([
+            'itemtype' => $data->itemtype,
+            'itemid' => $data->itemid,
+            'contextid' => $data->contextid,
+        ]);
+
+        if ($count == 0) {
+            $DB->insert_record('grade_penalty_exemptions', $data);
+        }
+    }
+
+    /**
+     * Process the group_penalty_exemption element.
+     * Exemptions are not restored if they already exist.
+     *
+     * @param array $data The exemption data.
+     */
+    protected function process_group_penalty_exemption($data) {
+        global $DB;
+
+        // Update the data to be processed.
+        $data = (object) $data;
+        $data->itemid = $this->get_mappingid('group', $data->itemid);
+        $data->contextid = $this->get_mappingid('context', $data->contextid);
+        $data->usermodified = $this->get_mappingid('user', $data->usermodified);
+        unset($data->id);
+
+        // Check if the exemption already exists.
+        $count = \core_grades\penalty_exemption::count_by([
+            'itemtype' => $data->itemtype,
+            'itemid' => $data->itemid,
+            'contextid' => $data->contextid,
+        ]);
+
+        if ($count == 0) {
+            $DB->insert_record('grade_penalty_exemptions', $data);
+        }
+    }
+}
+
+/**
  * Step in charge of restoring the grade history of an activity.
  *
  * This step is added to the task regardless of the setting 'grade_histories'.

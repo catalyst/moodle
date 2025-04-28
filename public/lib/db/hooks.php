@@ -38,6 +38,10 @@ $callbacks = [
         'callback' => \core_communication\hook_listener::class . '::delete_group_communication',
     ],
     [
+        'hook' => \core_group\hook\after_group_deleted::class,
+        'callback' => \core_grades\hook_listener::class . '::delete_group_exemptions',
+    ],
+    [
         'hook' => \core_group\hook\after_group_membership_added::class,
         'callback' => \core_communication\hook_listener::class . '::add_members_to_group_room',
     ],

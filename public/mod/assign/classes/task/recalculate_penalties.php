@@ -33,23 +33,71 @@ class recalculate_penalties extends adhoc_task {
         require_once($CFG->dirroot . '/mod/assign/lib.php');
         require_once($CFG->dirroot . '/course/lib.php');
 
-        $assignid = $this->get_custom_data()->assignid;
-        $assign = $DB->get_record('assign', ['id' => $assignid], '*', MUST_EXIST);
-        $cm = get_coursemodule_from_instance('assign', $assignid, 0, false, MUST_EXIST);
-        $assign->cmidnumber = $cm->idnumber;
-        assign_update_grades($assign);
+        // Get the custom data for this task.
+        $assignids = $this->get_custom_data()->assignids ?? [];
+        $userids = $this->get_custom_data()->userids ?? null;
+        $usermodified = $this->get_custom_data()->usermodified ?? 0;
+
+        // Validate parameters.
+        if (empty($assignids) || !is_array($assignids) || !is_array($userids) && !is_null($userids)) {
+            mtrace('Invalid parameters, skipping penalty recalculation.');
+            return;
+        }
+
+        if (is_array($userids) && empty($userids)) {
+            mtrace('Empty user list provided, skipping penalty recalculation.');
+            mtrace('Hint: If you want to recalculate penalties for all users, pass null instead of an empty array.');
+            return;
+        }
+
+        $assigncount = count($assignids);
+        $usercount = is_null($userids) ? 'all' : count($userids);
+        mtrace("Penalty recalculation was initiated by user {$usermodified} " .
+            "for {$assigncount} assignments and {$usercount} users.");
+
+        // Fetch assignment records with an additional cmidnumber field.
+        [$insql, $inparams] = $DB->get_in_or_equal($assignids);
+        $sql = "SELECT a.*, cm.id AS cmidnumber
+                  FROM {assign} a
+                  JOIN {course_modules} cm ON a.id = cm.instance
+                  JOIN {modules} m ON cm.module = m.id
+                 WHERE m.name = 'assign' AND a.id $insql";
+        $assigns = $DB->get_records_sql($sql, $inparams);
+
+        if (is_null($userids)) {
+            // For each assignment, recalculate penalties for all users.
+            foreach ($assigns as $assign) {
+                mtrace("Recalculating penalties for all users in assignment {$assign->id}.");
+                assign_update_grades($assign);
+            }
+            return;
+        }
+
+        foreach ($assigns as $assign) {
+            // For each assignment, recalculate penalties for the specified users.
+            $users = $DB->get_fieldset('assign_grades', 'userid', ['assignment' => $assign->id]);
+            $users = array_intersect($users, $userids);
+            foreach ($users as $userid) {
+                mtrace("Recalculating penalties for user {$userid} in assignment {$assign->id}.");
+                assign_update_grades($assign, $userid);
+            }
+        }
+
+        mtrace('Penalty recalculation completed.');
     }
 
     /**
      * Queue the task.
      *
-     * @param int $assignid assignment id
-     * @param int $usermodified user who triggered the recalculation
+     * @param int[] $assignids List of assignment IDs to recalculate penalties for.
+     * @param int[]|null $userids List of user IDs to recalculate penalties for. If null, all users will be processed.
+     * @param int $usermodified The user ID of the user who triggered the recalculation.
      */
-    public static function queue(int $assignid, int $usermodified): void {
+    public static function queue(array $assignids, ?array $userids, int $usermodified): void {
         $task = new self();
         $task->set_custom_data((object) [
-            'assignid' => $assignid,
+            'assignids' => $assignids,
+            'userids' => $userids,
             'usermodified' => $usermodified,
         ]);
         \core\task\manager::queue_adhoc_task($task);

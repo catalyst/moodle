@@ -184,6 +184,9 @@ abstract class restore_activity_task extends restore_task {
         // Grade history. The setting 'grade_history' is handled in the step.
         $this->add_step(new restore_activity_grade_history_structure_step('activity_grade_history', 'grade_history.xml'));
 
+        // Restore the grade penalty exemptions file for this activity.
+        $this->add_step(new restore_grade_penalty_exemptions_structure_step('grade_penalty_exemptions', 'exemptions.xml'));
+
         // Userscompletion (conditionally)
         if ($this->get_setting_value('userscompletion')) {
             $this->add_step(new restore_userscompletion_structure_step('activity_userscompletion', 'completion.xml'));
