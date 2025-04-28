@@ -113,7 +113,7 @@ class group extends base {
         ))
             ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TEXT)
-            ->add_fields("{$groupsalias}.name, {$groupsalias}.courseid")
+            ->add_fields("{$groupsalias}.name, {$groupsalias}.courseid, {$groupsalias}.id")
             ->add_fields(context_helper::get_preload_record_columns_sql($contextalias))
             ->set_is_sortable(true)
             ->set_callback(static function($name, stdClass $group): string {
