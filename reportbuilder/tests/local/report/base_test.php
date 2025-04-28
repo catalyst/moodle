@@ -60,6 +60,19 @@ final class base_test extends advanced_testcase {
     }
 
     /**
+     * Test for add_base_condition_simple array
+     */
+    public function test_add_base_condition_simple_array(): void {
+        $this->resetAfterTest();
+
+        $systemreport = system_report_factory::create(system_report_available::class, context_system::instance());
+        $systemreport->add_base_condition_simple('username', ['admin', 'guest']);
+        [$where, $params] = $systemreport->get_base_condition();
+        $this->assertStringMatchesFormat('username IN (:%a, :%a)', $where);
+        $this->assertEqualsCanonicalizing(['admin', 'guest'], array_values($params));
+    }
+
+    /**
      * Test for add_base_condition_simple null
      */
     public function test_add_base_condition_simple_null(): void {
