@@ -17,7 +17,9 @@
 namespace core_grades;
 
 use core\context;
+use core\exception\moodle_exception;
 use core\plugininfo\gradepenalty;
+use core_grades\penalty_exemption;
 use core_plugin_manager;
 use grade_grade;
 use grade_item;
@@ -188,8 +190,12 @@ class penalty_manager {
 
         try {
             $container = self::apply_penalty($userid, $gradeitem, $submissiondate, $duedate, $previewonly);
-        } catch (\core\exception\moodle_exception $e) {
-            debugging($e->getMessage(), DEBUG_DEVELOPER);
+        } catch (moodle_exception $e) {
+            if ($e->errorcode === 'gradepenaltyalreadyapplied') {
+                throw $e;
+            } else {
+                debugging($e->getMessage(), DEBUG_DEVELOPER);
+            }
         }
         return $container;
     }
@@ -212,8 +218,15 @@ class penalty_manager {
         bool $previewonly = false
     ): penalty_container {
 
-        // Get the grade and create a penalty container.
+        // Get the grade.
         $grade = $gradeitem->get_grade($userid);
+
+        // Check if the grade already has a penalty applied.
+        if ($grade->deductedmark != 0) {
+            throw new moodle_exception('gradepenaltyalreadyapplied', 'core_grades', '', $grade->id);
+        }
+
+        // Create a penalty container.
         $container = new penalty_container($gradeitem, $grade, $submissiondate, $duedate);
 
         // Do not apply penalties if the module is disabled.
@@ -223,6 +236,11 @@ class penalty_manager {
 
         // Do not apply penalties if the grade is not eligible.
         if (!self::is_penalty_enabled_for_grade($grade)) {
+            return $container;
+        }
+
+        // Do not apply penalties if the user is exempt.
+        if (penalty_exemption::is_user_exempt($userid, $gradeitem->get_context()->id)) {
             return $container;
         }
 
@@ -266,9 +284,7 @@ class penalty_manager {
      * @param stdClass $course The course object
      * @param context $coursecontext The course context
      */
-    public static function extend_navigation_course(navigation_node $navigation,
-                                                    stdClass $course,
-                                                    context $coursecontext): void {
+    public static function extend_navigation_course(navigation_node $navigation, stdClass $course, context $coursecontext): void {
         // Create new navigation node for grade penalty.
         $penaltynav = $navigation->add(get_string('gradepenalty', 'core_grades'),
             new moodle_url('/grade/penalty/view.php', ['contextid' => $coursecontext->id]),

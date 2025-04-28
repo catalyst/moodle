@@ -1,0 +1,278 @@
+<?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+namespace core_grades;
+
+use advanced_testcase;
+use context_course;
+use context_module;
+use context_system;
+use core\plugininfo\gradepenalty;
+use grade_item;
+use html_writer;
+
+/**
+ * Unit tests for penalty_exemption class.
+ *
+ * @package   core_grades
+ * @copyright 2024 Catalyst IT Australia Pty Ltd
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @covers \core_grades\penalty_exemption
+ */
+final class penalty_exemption_test extends advanced_testcase {
+
+    /**
+     * Reset the test environment after each test.
+     *
+     * @return void
+     */
+    protected function setUp(): void {
+        $this->resetAfterTest(true);
+    }
+
+    /**
+     * Test the CRUD operations for user exemptions.
+     *
+     * @return void
+     */
+    public function test_user_exemption_crud(): void {
+        global $DB, $USER;
+
+        $this->setAdminUser();
+        $user = $this->getDataGenerator()->create_user();
+        $course = $this->getDataGenerator()->create_course();
+        $context = context_course::instance($course->id);
+
+        $component = 'gradepenalty_duedate';
+        $reason = 'Medical certificate';
+        $reasonformat = FORMAT_PLAIN;
+
+        $exemption = penalty_exemption::exempt_user(
+            $component,
+            $user->id,
+            $context->id,
+            $reason,
+            $reasonformat
+        );
+
+        $this->assertInstanceOf(penalty_exemption::class, $exemption);
+        $this->assertNotNull($exemption->get_id());
+        $this->assertEquals($component, $exemption->get_component());
+        $this->assertEquals(penalty_exemption::TYPE_USER, $exemption->get_itemtype());
+        $this->assertEquals($user->id, $exemption->get_itemid());
+        $this->assertEquals($context->id, $exemption->get_contextid());
+        $this->assertEquals($reason, $exemption->get_reason());
+        $this->assertEquals($reasonformat, $exemption->get_reasonformat());
+        $this->assertEquals($exemption->get_usermodified(), $USER->id);
+
+        // Save changes to the exemption.
+        $exemption->set_reason(html_writer::span('Updated reason'), FORMAT_HTML);
+        $exemption->save();
+
+        // Test retrieval by id.
+        $fetched = penalty_exemption::get($exemption->get_id());
+        $this->assertEquals($exemption, $fetched);
+
+        // Test retrieval by component, itemtype, itemid and contextid.
+        $fetched = penalty_exemption::find_by([
+            'component' => $component,
+            'itemtype' => penalty_exemption::TYPE_USER,
+            'itemid' => $user->id,
+            'contextid' => $context->id,
+        ]);
+        $this->assertCount(1, $fetched);
+        $this->assertEquals($exemption, reset($fetched));
+
+        // Test deletion.
+        $id = $exemption->get_id();
+        $exemption->delete();
+        $this->assertNull($exemption->get_id());
+        $this->assertNull(penalty_exemption::get($id));
+        $this->assertCount(0, penalty_exemption::find_by([
+            'component' => $component,
+            'itemtype' => penalty_exemption::TYPE_USER,
+            'itemid' => $user->id,
+            'contextid' => $context->id,
+        ]));
+    }
+
+    /**
+     * Test the CRUD operations for user exemptions.
+     *
+     * @return void
+     */
+    public function test_group_exemption_crud(): void {
+        global $DB, $USER;
+
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course();
+        $context = context_course::instance($course->id);
+        $group = $this->getDataGenerator()->create_group(['courseid' => $course->id]);
+
+        $component = 'gradepenalty_duedate';
+        $reason = 'Medical certificate';
+        $reasonformat = FORMAT_PLAIN;
+
+        $exemption = penalty_exemption::exempt_group(
+            $component,
+            $group->id,
+            $context->id,
+            $reason,
+            $reasonformat
+        );
+
+        $this->assertInstanceOf(penalty_exemption::class, $exemption);
+        $this->assertNotNull($exemption->get_id());
+        $this->assertEquals($component, $exemption->get_component());
+        $this->assertEquals(penalty_exemption::TYPE_GROUP, $exemption->get_itemtype());
+        $this->assertEquals($group->id, $exemption->get_itemid());
+        $this->assertEquals($context->id, $exemption->get_contextid());
+        $this->assertEquals($reason, $exemption->get_reason());
+        $this->assertEquals($reasonformat, $exemption->get_reasonformat());
+        $this->assertEquals($exemption->get_usermodified(), $USER->id);
+
+        // Save changes to the exemption.
+        $exemption->set_reason(html_writer::span('Updated reason'), FORMAT_HTML);
+        $exemption->save();
+
+        // Test retrieval by id.
+        $fetched = penalty_exemption::get($exemption->get_id());
+        $this->assertEquals($exemption, $fetched);
+
+        // Test retrieval by component, itemtype, itemid and contextid.
+        $fetched = penalty_exemption::find_by([
+            'component' => $component,
+            'itemtype' => penalty_exemption::TYPE_GROUP,
+            'itemid' => $group->id,
+            'contextid' => $context->id,
+        ]);
+        $this->assertCount(1, $fetched);
+        $this->assertEquals($exemption, reset($fetched));
+
+        // Test deletion.
+        $id = $exemption->get_id();
+        $exemption->delete();
+        $this->assertNull($exemption->get_id());
+        $this->assertNull(penalty_exemption::get($id));
+        $this->assertCount(0, penalty_exemption::find_by([
+            'component' => $component,
+            'itemtype' => penalty_exemption::TYPE_GROUP,
+            'itemid' => $group->id,
+            'contextid' => $context->id,
+        ]));
+    }
+
+    public function test_user_is_exempt(): void {
+        global $DB;
+
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $assign = $this->getDataGenerator()->create_module('assign', ['course' => $course->id]);
+
+        $sitectx = context_system::instance();
+        $coursectx = context_course::instance($course->id);
+        $assignctx = context_module::instance($assign->cmid);
+
+        $admin = $this->getDataGenerator()->create_user();
+        $teacher = $this->getDataGenerator()->create_user();
+        $student = $this->getDataGenerator()->create_user();
+        $student2 = $this->getDataGenerator()->create_user();
+
+        penalty_exemption::exempt_user('gradepenalty_duedate', $admin->id, $sitectx->id);
+        penalty_exemption::exempt_user('gradepenalty_duedate', $teacher->id, $coursectx->id);
+        penalty_exemption::exempt_user('gradepenalty_duedate', $student->id, $assignctx->id);
+
+        $this->assertTrue(penalty_exemption::is_user_exempt($admin->id, $sitectx->id));
+        $this->assertTrue(penalty_exemption::is_user_exempt($admin->id, $coursectx->id));
+        $this->assertTrue(penalty_exemption::is_user_exempt($admin->id, $assignctx->id));
+
+        $this->assertFalse(penalty_exemption::is_user_exempt($teacher->id, $sitectx->id));
+        $this->assertTrue(penalty_exemption::is_user_exempt($teacher->id, $coursectx->id));
+        $this->assertTrue(penalty_exemption::is_user_exempt($teacher->id, $assignctx->id));
+
+        $this->assertFalse(penalty_exemption::is_user_exempt($student->id, $sitectx->id));
+        $this->assertFalse(penalty_exemption::is_user_exempt($student->id, $coursectx->id));
+        $this->assertTrue(penalty_exemption::is_user_exempt($student->id, $assignctx->id));
+
+        $this->assertFalse(penalty_exemption::is_user_exempt($student2->id, $sitectx->id));
+        $this->assertFalse(penalty_exemption::is_user_exempt($student2->id, $coursectx->id));
+        $this->assertFalse(penalty_exemption::is_user_exempt($student2->id, $assignctx->id));
+    }
+
+    public function test_group_is_exempt(): void {
+        global $DB;
+
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $assign = $this->getDataGenerator()->create_module('assign', ['course' => $course->id]);
+
+        $sitectx = context_system::instance();
+        $coursectx = context_course::instance($course->id);
+        $assignctx = context_module::instance($assign->cmid);
+
+        $group1 = $this->getDataGenerator()->create_group(['courseid' => SITEID]);
+        $group2 = $this->getDataGenerator()->create_group(['courseid' => $course->id]);
+        $group3 = $this->getDataGenerator()->create_group(['courseid' => $course->id]);
+
+        $this->assertFalse(penalty_exemption::is_group_exempt($group1->id, $sitectx->id));
+        $this->assertFalse(penalty_exemption::is_group_exempt($group2->id, $coursectx->id));
+        $this->assertFalse(penalty_exemption::is_group_exempt($group3->id, $assignctx->id));
+
+        penalty_exemption::exempt_group('gradepenalty_duedate', $group1->id, $sitectx->id);
+        penalty_exemption::exempt_group('gradepenalty_duedate', $group2->id, $coursectx->id);
+        penalty_exemption::exempt_group('gradepenalty_duedate', $group3->id, $assignctx->id);
+
+        $this->assertTrue(penalty_exemption::is_group_exempt($group1->id, $sitectx->id));
+        $this->assertTrue(penalty_exemption::is_group_exempt($group1->id, $coursectx->id));
+        $this->assertTrue(penalty_exemption::is_group_exempt($group1->id, $assignctx->id));
+
+        $this->assertFalse(penalty_exemption::is_group_exempt($group2->id, $sitectx->id));
+        $this->assertTrue(penalty_exemption::is_group_exempt($group2->id, $coursectx->id));
+        $this->assertTrue(penalty_exemption::is_group_exempt($group2->id, $assignctx->id));
+
+        $this->assertFalse(penalty_exemption::is_group_exempt($group3->id, $sitectx->id));
+        $this->assertFalse(penalty_exemption::is_group_exempt($group3->id, $coursectx->id));
+        $this->assertTrue(penalty_exemption::is_group_exempt($group3->id, $assignctx->id));
+
+        $student = $this->getDataGenerator()->create_and_enrol($course);
+
+        $this->assertFalse(penalty_exemption::is_user_exempt($student->id, $sitectx->id));
+        $this->assertFalse(penalty_exemption::is_user_exempt($student->id, $coursectx->id));
+        $this->assertFalse(penalty_exemption::is_user_exempt($student->id, $assignctx->id));
+
+        groups_add_member($group3, $student);
+
+        $this->assertFalse(penalty_exemption::is_user_exempt($student->id, $sitectx->id));
+        $this->assertFalse(penalty_exemption::is_user_exempt($student->id, $coursectx->id));
+        $this->assertTrue(penalty_exemption::is_user_exempt($student->id, $assignctx->id));
+
+        groups_remove_member($group3, $student);
+        groups_add_member($group2, $student);
+
+        $this->assertFalse(penalty_exemption::is_user_exempt($student->id, $sitectx->id));
+        $this->assertTrue(penalty_exemption::is_user_exempt($student->id, $coursectx->id));
+        $this->assertTrue(penalty_exemption::is_user_exempt($student->id, $assignctx->id));
+
+        groups_remove_member($group2, $student);
+        groups_add_member($group1, $student);
+
+        $this->assertTrue(penalty_exemption::is_user_exempt($student->id, $sitectx->id));
+        $this->assertTrue(penalty_exemption::is_user_exempt($student->id, $coursectx->id));
+        $this->assertTrue(penalty_exemption::is_user_exempt($student->id, $assignctx->id));
+    }
+}
