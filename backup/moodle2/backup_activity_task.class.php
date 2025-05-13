@@ -204,6 +204,9 @@ abstract class backup_activity_task extends backup_task {
         // Generate the grade history file. The setting 'grade_histories' is handled in the step.
         $this->add_step(new backup_activity_grade_history_structure_step('activity_grade_history', 'grade_history.xml'));
 
+        // Generate the grade penalty exemptions file for this activity.
+        $this->add_step(new backup_grade_penalty_exemptions_structure_step('grade_penalty_exemptions', 'exemptions.xml'));
+
         // Generate the competency file.
         $this->add_step(new backup_activity_competencies_structure_step('activity_competencies', 'competencies.xml'));
 
@@ -372,7 +375,7 @@ abstract class backup_activity_task extends backup_task {
             get_string('includeuserinfo_instance', 'core_backup', $this->name)
         );
         $this->add_setting($activityuserinfo);
-        // Look for "users" root setting.
+        // Look for "users" root setting.@@@
         $users = $this->plan->get_setting('users');
         $users->add_dependency($activityuserinfo);
 

@@ -125,6 +125,9 @@ class backup_course_task extends backup_task {
             $this->add_step(new backup_course_loglastaccess_structure_step('course_loglastaccess', 'loglastaccess.xml'));
         }
 
+        // Generate the grade penalty exemptions file for this course.
+        $this->add_step(new backup_grade_penalty_exemptions_structure_step('grade_penalty_exemptions', 'exemptions.xml'));
+
         // Generate the course competencies.
         $this->add_step(new backup_course_competencies_structure_step('course_competencies', 'competencies.xml'));
 

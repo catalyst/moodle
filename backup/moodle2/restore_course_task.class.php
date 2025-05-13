@@ -122,6 +122,9 @@ class restore_course_task extends restore_task {
             $this->add_step(new restore_calendarevents_structure_step('course_calendar', 'calendar.xml'));
         }
 
+        // Restore the grade penalty exemptions file for this course.
+        $this->add_step(new restore_grade_penalty_exemptions_structure_step('grade_penalty_exemptions', 'exemptions.xml'));
+
         // Course competencies.
         $this->add_step(new restore_course_competencies_structure_step('course_competencies', 'competencies.xml'));
 
