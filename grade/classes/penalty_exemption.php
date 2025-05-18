@@ -168,16 +168,18 @@ final class penalty_exemption {
     /**
      * Save the exemption to the database.
      *
+     * @param int|null $usermodified The user id of the user who last modified the exemption or the current user if null.
+     *
      * @return penalty_exemption The updated exemption object.
      */
-    public function save(): penalty_exemption {
+    public function save(?int $usermodified = null): penalty_exemption {
         global $DB, $USER;
 
         $this->validate();
 
         $time = time();
         $this->timemodified = $time;
-        $this->usermodified = $USER->id;
+        $this->usermodified = $usermodified ?? $USER->id;
 
         if (empty($this->id)) {
             $this->timecreated = $time;
