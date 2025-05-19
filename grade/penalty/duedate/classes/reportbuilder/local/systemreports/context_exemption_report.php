@@ -18,6 +18,7 @@ namespace gradepenalty_duedate\reportbuilder\local\systemreports;
 
 use context_system;
 use core\url;
+use core_reportbuilder\local\helpers\database;
 use html_writer;
 use lang_string;
 use pix_icon;
@@ -45,6 +46,7 @@ class context_exemption_report extends system_report {
      * @return void
      */
     protected function initialise(): void {
+        global $DB;
 
         $this->contextids = array_map('intval', explode(',', $this->get_parameter('contextids', '', PARAM_SEQUENCE)));
 
@@ -84,7 +86,9 @@ class context_exemption_report extends system_report {
         $this->add_entity($group);
 
         if (!empty($this->contextids)) {
-            $this->add_base_condition_simple('pe.contextid', $this->contextids);
+            $prefix = database::generate_param_name('contextids');
+            [$insql, $params] = $DB->get_in_or_equal($this->contextids, SQL_PARAMS_NAMED, $prefix);
+            $this->add_base_condition_sql("pe.contextid $insql", $params);
         }
 
         $this->add_columns();

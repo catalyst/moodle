@@ -19,6 +19,7 @@ namespace gradepenalty_duedate\reportbuilder\local\systemreports;
 use context_system;
 use core_grades\reportbuilder\local\entities\penalty_exemption;
 use core_reportbuilder\local\entities\user;
+use core_reportbuilder\local\helpers\database;
 use core_reportbuilder\local\report\action;
 use core_reportbuilder\system_report;
 use lang_string;
@@ -43,6 +44,7 @@ class user_exemption_report extends system_report {
      * @return void
      */
     protected function initialise(): void {
+        global $DB;
 
         $this->contextids = array_map('intval', explode(',', $this->get_parameter('contextids', '', PARAM_SEQUENCE)));
 
@@ -72,7 +74,9 @@ class user_exemption_report extends system_report {
         $this->add_entity($user);
 
         if (!empty($this->contextids)) {
-            $this->add_base_condition_simple('pe.contextid', $this->contextids);
+            $prefix = database::generate_param_name('contextids');
+            [$insql, $params] = $DB->get_in_or_equal($this->contextids, SQL_PARAMS_NAMED, $prefix);
+            $this->add_base_condition_sql("pe.contextid $insql", $params);
         }
 
         $this->add_columns();
