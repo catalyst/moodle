@@ -225,43 +225,20 @@ abstract class base {
     }
 
     /**
-     * Add a simple WHERE condition to the report.
+     * Define simple "field = value" clause to apply to the report query
      *
-     * The method accepts scalars, arrays, and null values.
-     * - If the value is a scalar, it will be compared with an equality operator.
-     * - If the value is an array, it will be compared with an IN operator.
-     * - If the value is null or an empty array, it will be compared with an IS NULL operator.
-     *
-     * @param string $fieldname The column name to apply the condition to
-     * @param mixed $fieldvalue The scalar, array, or null value to compare against
+     * @param string $fieldname
+     * @param mixed $fieldvalue
      */
     final public function add_base_condition_simple(string $fieldname, $fieldvalue): void {
-        if (is_array($fieldvalue)) {
-            $count = count($fieldvalue);
-
-            switch ($count) {
-                case 0:
-                    $fieldvalue = null;
-                    break;
-                case 1:
-                    $fieldvalue = reset($fieldvalue);
-                    break;
-                default:
-                    $paramnames = database::generate_param_names($count);
-                    $in = implode(', :', $paramnames);
-                    $params = array_combine($paramnames, $fieldvalue);
-                    $this->add_base_condition_sql("{$fieldname} IN (:{$in})", $params);
-                    return;
-            }
-        }
-
         if ($fieldvalue === null) {
             $this->add_base_condition_sql("{$fieldname} IS NULL");
-            return;
+        } else {
+            $fieldvalueparam = database::generate_param_name();
+            $this->add_base_condition_sql("{$fieldname} = :{$fieldvalueparam}", [
+                $fieldvalueparam => $fieldvalue,
+            ]);
         }
-
-        $paramname = database::generate_param_name();
-        $this->add_base_condition_sql("{$fieldname} = :{$paramname}", [$paramname => $fieldvalue]);
     }
 
     /**
