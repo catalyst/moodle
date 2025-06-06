@@ -16,7 +16,10 @@
 
 namespace mod_assign;
 
+use context_course;
+use core\task\manager;
 use core_component;
+use core_grades\penalty_exemption;
 use core_grades\penalty_manager;
 use grade_item;
 use mod_assign_test_generator;
@@ -39,6 +42,16 @@ require_once($CFG->dirroot . '/mod/assign/tests/generator.php');
 final class penalty_test extends \advanced_testcase {
     // Use the generator helper.
     use mod_assign_test_generator;
+
+    /**
+     * Reset the test environment after each test.
+     *
+     * @return void
+     */
+    protected function setUp(): void {
+        parent::setUp();
+        $this->resetAfterTest();
+    }
 
     /**
      * Set up test
@@ -76,7 +89,6 @@ final class penalty_test extends \advanced_testcase {
      * @covers ::assign_supports
      */
     public function test_penalty_support(): void {
-        $this->resetAfterTest();
         $this->setAdminUser();
 
         // Assign should be in the supported list.
@@ -150,7 +162,6 @@ final class penalty_test extends \advanced_testcase {
     ): void {
         global $DB;
 
-        $this->resetAfterTest();
         [$course, $student] = $this->set_up_test();
 
         // Assignment.
@@ -224,8 +235,6 @@ final class penalty_test extends \advanced_testcase {
     public function test_recalculate_penalty(): void {
         global $DB;
 
-        $this->resetAfterTest();
-
         [$course, $student] = $this->set_up_test();
 
         // Assignment.
@@ -275,5 +284,54 @@ final class penalty_test extends \advanced_testcase {
 
         // Check the grade.
         $this->assertEquals(50, $gradeitem->get_final($student->id)->finalgrade);
+    }
+
+    /**
+     * Test recalculating penalties for hidden groups and users.
+     *
+     * @covers \mod_assign\task\recalculate_penalties::queue
+     *
+     * @return void
+     */
+    public function test_recalculate_penalties(): void {
+        global $DB;
+
+        // Setup the course.
+        $course = $this->getDataGenerator()->create_course(['groupmode' => SEPARATEGROUPS]);
+        $context = context_course::instance($course->id);
+        $this->getDataGenerator()->create_module('assign', ['course' => $course->id]);
+        $group = $this->getDataGenerator()->create_group(['courseid' => $course->id, 'visibility' => GROUPS_VISIBILITY_NONE]);
+
+        // Setup users.
+        $teacher = $this->getDataGenerator()->create_and_enrol($course, 'teacher');
+        $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
+        groups_add_member($group, $student);
+
+        // Enable grade penalties for the assign module.
+        penalty_manager::enable_module('assign');
+
+        // Log in as the teacher.
+        $this->setUser($teacher);
+
+        // Check initial capabilities.
+        $this->assertNotEmpty(groups_get_members($group->id));
+
+        // Update capabilities to prevent viewing hidden groups.
+        $roleid = $DB->get_field('role', 'id', ['shortname' => 'teacher']);
+        assign_capability('moodle/course:viewhiddengroups', CAP_PREVENT, $roleid, $context->id);
+
+        // Check updated capabilities.
+        $this->assertEmpty(groups_get_members($group->id));
+
+        // Create an exemption, triggering penalty recalculation.
+        $exemption = penalty_exemption::exempt_group($group->id, $context->id);
+        $this->assertCount(1, manager::get_adhoc_tasks(\mod_assign\task\recalculate_penalties::class));
+
+        // Log in as admin to always view hidden groups.
+        $this->setAdminUser();
+
+        // Delete the exemption, triggering penalty recalculation.
+        $exemption->delete();
+        $this->assertCount(2, manager::get_adhoc_tasks(\mod_assign\task\recalculate_penalties::class));
     }
 }

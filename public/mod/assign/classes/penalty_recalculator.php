@@ -45,7 +45,9 @@ class penalty_recalculator extends \core_grades\penalty_recalculator {
                 // Queue a task for the course.
                 $courseid = $context->instanceid;
                 $assignids = $DB->get_fieldset('assign', 'id', ['course' => $courseid]);
-                recalculate_penalties::queue($assignids, $userids, $usermodified);
+                if (!empty($assignids)) {
+                    recalculate_penalties::queue($assignids, $userids, $usermodified);
+                }
                 break;
 
             case CONTEXT_SYSTEM:
