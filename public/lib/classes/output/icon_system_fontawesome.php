@@ -328,6 +328,7 @@ class icon_system_fontawesome extends icon_system_font {
             'core:i/sendmessage' => 'fa-regular fa-paper-plane',
             'core:i/settings' => 'fa-gear',
             'core:i/share' => 'fa-regular fa-share-from-square',
+            'core:i/shield' => 'fa-shield-halved',
             'core:i/show' => 'fa-regular fa-eye-slash',
             'core:i/siteevent' => 'fa-solid fa-globe',
             'core:i/star' => 'fa-star',

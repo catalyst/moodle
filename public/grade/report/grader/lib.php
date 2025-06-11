@@ -1190,9 +1190,9 @@ class grade_report_grader extends grade_report {
                         }
 
                         $context->extraclasses = 'gradevalue ' . $hidden . $gradepass;
-                        $context->text = grade_format_gradevalue($gradeval, $item, true,
+                        $context->text = penalty_manager::render_penalty_status($grade, $grade->rawgrade > $grade->rawgrademin);
+                        $context->text .= grade_format_gradevalue($gradeval, $item, true,
                             $gradedisplaytype, null);
-                        $context->text .= penalty_manager::show_penalty_indicator($grade);
                     }
                 }
 

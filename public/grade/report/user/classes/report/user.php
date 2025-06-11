@@ -702,7 +702,7 @@ class user extends grade_report {
                             $gradeitemdata['graderaw'] = $gradeval;
                             $data['grade']['content'] = grade_format_gradevalue($gradeval,
                                 $gradegrade->grade_item,
-                                true) . penalty_manager::show_penalty_indicator($gradegrade) . $gradestatus;
+                                true) . penalty_manager::render_penalty_status($gradegrade) . $gradestatus;
                         }
                     } else {
                         $gradestatusclass = '';
@@ -729,7 +729,7 @@ class user extends grade_report {
 
                         $data['grade']['class'] = "{$class} {$gradestatusclass}";
                         $data['grade']['content'] = $gradepassicon . grade_format_gradevalue($gradeval,
-                            $gradegrade->grade_item, true) . penalty_manager::show_penalty_indicator($gradegrade) . $gradestatus;
+                            $gradegrade->grade_item, true) . penalty_manager::render_penalty_status($gradegrade) . $gradestatus;
                         $gradeitemdata['graderaw'] = $gradeval;
                     }
                     $data['grade']['headers'] = "$headercat $headerrow grade$userid";

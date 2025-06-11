@@ -2035,7 +2035,7 @@ class assign {
      * @param float $deductedmark The deducted mark if penalty is applied
      * @return string User-friendly representation of grade
      */
-    public function display_grade($grade, $editing, $userid = 0, $modified = 0, float $deductedmark = 0) {
+    public function display_grade($grade, $editing, $userid = 0, $modified = 0, float $deductedmark = 0, $showexemptions = true) {
         global $DB, $PAGE;
 
         static $scalegrades = array();
@@ -2074,16 +2074,14 @@ class assign {
                 }
             }
 
-            // Add penalty indicator, icon only.
-            $penaltyindicator = '';
-            if ($deductedmark > 0) {
-                $gradegrade = new \grade_grade();
-                $gradegrade->deductedmark = $deductedmark;
-                $gradegrade->overridden = $userid > 0 ? $this->get_grade_item()->get_grade($userid)->overridden : 0;
-                $penaltyindicator = \core_grades\penalty_manager::show_penalty_indicator($gradegrade);
-            }
-
-            return $penaltyindicator . $o;
+            $penaltystatus = '';
+            $gradegrade = new \grade_grade();
+            $gradegrade->deductedmark = $deductedmark;
+            $gradegrade->overridden = $userid > 0 ? $this->get_grade_item()->get_grade($userid)->overridden : 0;
+            $gradegrade->itemid = $this->get_grade_item()->id;
+            $gradegrade->userid = $userid;
+            $penaltystatus = \core_grades\penalty_manager::render_penalty_status($gradegrade, $showexemptions);
+            return $penaltystatus . $o;
         } else {
             // Scale.
             if (empty($this->cache['scale'])) {
@@ -5548,14 +5546,14 @@ class assign {
                         $cangrade
                     );
                     // Display the penalty indicator next to the penalized grade, if applicable.
-                    $penaltyindicator = \core_grades\penalty_manager::show_penalty_indicator(
+                    $penaltystatus = \core_grades\penalty_manager::render_penalty_status(
                         new \grade_grade([
                             'deductedmark' => $gradebookgrade->deductedmark ?? 0,
                             'overridden' => $gradebookgrade->overridden ?? 0,
                         ], false)
                     );
 
-                    $gradefordisplay = $penaltyindicator . $gradebookgrade->str_long_grade;
+                    $gradefordisplay = $penaltystatus . $gradebookgrade->str_long_grade;
                 } else {
                     // This grade info is the grade from gradebook.
                     // We need user id to determine if the grade is overridden or not.
@@ -5780,13 +5778,13 @@ class assign {
             if ($controller) {
                 $controller->set_grade_range(make_grades_menu($this->get_instance()->grade), $this->get_instance()->grade > 0);
                 // Display the penalty indicator next to the penalized grade, if applicable.
-                $penaltyindicator = \core_grades\penalty_manager::show_penalty_indicator(
+                $penaltystatus = \core_grades\penalty_manager::render_penalty_status(
                     new \grade_grade([
                         'deductedmark' => $deductedmark,
                         'overridden' => $userid > 0 ? $this->get_grade_item()->get_grade($userid)->overridden : 0,
                     ], false)
                 );
-                $gradeoutput = $penaltyindicator . format_float($penalisedgrade, $this->get_grade_item()->get_decimals());
+                $gradeoutput = $penaltystatus . format_float($penalisedgrade, $this->get_grade_item()->get_decimals());
 
                 $grade->gradefordisplay = $controller->render_grade($PAGE, $grade->id, $gradingitem, $gradeoutput, $cangrade);
             } else {
@@ -8063,8 +8061,10 @@ class assign {
             $gradegrade = new \grade_grade();
             $gradegrade->deductedmark = $userassigngrade->deductedmark;
             $gradegrade->overridden = $userassigngrade->overridden;
-            $penaltyindicator = \core_grades\penalty_manager::show_penalty_indicator($gradegrade);
-            $gradestring = $penaltyindicator . $gradestring;
+            $gradegrade->itemid = $this->get_grade_item()->id;
+            $gradegrade->userid = $userid;
+            $penaltystatus = \core_grades\penalty_manager::render_penalty_status($gradegrade);
+            $gradestring = $penaltystatus . $gradestring;
         }
 
         if ($this->get_instance()->markingworkflow) {

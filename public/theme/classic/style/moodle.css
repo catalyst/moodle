@@ -38316,6 +38316,13 @@ p.arrow_button {
   margin-right: 1rem;
 }
 
+.gradepenaltystatus {
+  padding: 6px;
+}
+.gradepenaltystatus .icon {
+  margin: 0;
+}
+
 .columns-autoflow-1to1to1 {
   column-count: 3;
 }

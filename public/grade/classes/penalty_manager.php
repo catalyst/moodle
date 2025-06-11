@@ -247,23 +247,17 @@ class penalty_manager {
     }
 
     /**
-     * Returns the penalty indicator HTML code if a penalty is applied to the grade.
-     * Otherwise, returns an empty string.
+     * The penalty status for a grade rendered as HTML or an empty string if not applicable.
      *
-     * @param grade_grade $grade Grade object
-     * @return string HTML code for penalty indicator
+     * @param grade_grade $grade Grade object.
+     * @param bool $showexemptions Whether to show exemptions in the status.
+     * @return string HTML code for the penalty indicator or an empty string.
      */
-    public static function show_penalty_indicator(grade_grade $grade): string {
+    public static function render_penalty_status(grade_grade $grade, bool $showexemptions = true): string {
         global $PAGE;
-
-        // Show penalty indicator if penalty is greater than 0.
-        if ($grade->is_penalty_applied_to_final_grade()) {
-            $indicator = new \core_grades\output\penalty_indicator(2, $grade);
-            $renderer = $PAGE->get_renderer('core_grades');
-            return $renderer->render_penalty_indicator($indicator);
-        }
-
-        return '';
+        $indicator = new \core_grades\output\penalty_status($grade, 2, $showexemptions);
+        $renderer = $PAGE->get_renderer('core_grades');
+        return $renderer->render_penalty_status($indicator);
     }
 
     /**
