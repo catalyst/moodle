@@ -369,12 +369,14 @@ class grade extends tablelike implements selectable_items, filterable_items {
                         continue;
                     }
 
-                    $grade = grade_grade::fetch([
-                        'itemid' => $gradeitem->id,
-                        'userid' => $itemid
-                    ]);
+                    $grade = $gradeitem->get_grade($itemid, false);
 
-                    $data->$field = empty($grade) ? $null : $grade->finalgrade;
+                    if (empty($grade) || is_null($grade->rawgrade) || is_null($grade->finalgrade)) {
+                        $data->$field = $null;
+                    } else {
+                        $data->$field = $grade->finalgrade;
+                    }
+
                     $data->{"old$field"} = $data->$field;
                 }
             }

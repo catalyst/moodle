@@ -5550,6 +5550,8 @@ class assign {
                         new \grade_grade([
                             'deductedmark' => $gradebookgrade->deductedmark ?? 0,
                             'overridden' => $gradebookgrade->overridden ?? 0,
+                            'itemid' => $this->get_grade_item()->id,
+                            'userid' => $user->id,
                         ], false)
                     );
 
@@ -5782,6 +5784,8 @@ class assign {
                     new \grade_grade([
                         'deductedmark' => $deductedmark,
                         'overridden' => $userid > 0 ? $this->get_grade_item()->get_grade($userid)->overridden : 0,
+                        'itemid' => $this->get_grade_item()->id,
+                        'userid' => $userid,
                     ], false)
                 );
                 $gradeoutput = $penaltystatus . format_float($penalisedgrade, $this->get_grade_item()->get_decimals());
