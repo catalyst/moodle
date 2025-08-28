@@ -1,5 +1,5 @@
 <?php
-// This file is part of Moodle - http://moodle.org/
+// This file is part of Moodle - https://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -12,69 +12,116 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace mod_quiz\local;
 
+use advanced_testcase;
+use cache_helper;
+use context_module;
+
 /**
- * Cache manager tests for quiz overrides
+ * Tests for the override_cache.
  *
- * @package   mod_quiz
- * @copyright 2024 Matthew Hilton <matthewhilton@catalyst-au.net>
- * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers    \mod_quiz\local\override_cache
+ * @package     mod_quiz
+ * @copyright   2025 Catalyst IT Australia Pty Ltd
+ * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @covers      \mod_quiz\local\override_cache
  */
-final class override_cache_test extends \advanced_testcase {
+final class override_cache_test extends advanced_testcase {
     /**
-     * Tests CRUD functions of the override_cache
+     * Tests the core functionality of the quiz overrides cache.
      */
-    public function test_crud(): void {
-        // Cache is normally protected, but for testing we reflect it and put test data into it.
-        $overridecache = new override_cache(0);
-        $reflection = new \ReflectionClass($overridecache);
+    public function test_cache_operations(): void {
+        global $DB;
 
-        $getcache = $reflection->getMethod('get_cache');
-        $cache = $getcache->invoke($overridecache);
+        $this->resetAfterTest();
+        $this->setAdminUser();
 
-        $getuserkey = $reflection->getMethod('get_user_cache_key');
+        // Setup environment.
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $quiz = $generator->create_module('quiz', ['course' => $course->id]);
+        $user1 = $generator->create_and_enrol($course);
+        $user2 = $generator->create_and_enrol($course);
+        $group = $generator->create_group(['courseid' => $course->id]);
+        groups_add_member($group->id, $user2->id);
 
-        $getgroupkey = $reflection->getMethod('get_group_cache_key');
+        $manager = new override_manager($quiz, context_module::instance($quiz->cmid));
 
-        $dummydata = (object)[
-            'userid' => 1234,
+        // Populate the cache and check it is empty initially.
+        $this->assertNull(override_cache::get_overrides($quiz->id, $user1->id));
+        $this->assertNull(override_cache::get_overrides($quiz->id, $user2->id));
+
+        $useroverrideconfig = [
+            'quizid' => $quiz->id,
+            'userid' => $user1->id,
+            'timelimit' => HOURSECS,
         ];
 
-        // Set some data.
-        $cache->set($getuserkey->invoke($overridecache, 123), $dummydata);
-        $cache->set($getgroupkey->invoke($overridecache, 456), $dummydata);
+        $groupoverrideconfig = [
+            'quizid' => $quiz->id,
+            'groupid' => $group->id,
+            'timelimit' => HOURSECS * 2,
+        ];
 
-        // Get the data back.
-        $this->assertEquals($dummydata, $overridecache->get_cached_user_override(123));
-        $this->assertEquals($dummydata, $overridecache->get_cached_group_override(456));
+        // Create a user override and a group override.
+        $useroverrideid = $manager->save_override($useroverrideconfig);
+        $groupoverrideid = $manager->save_override($groupoverrideconfig);
 
-        // Delete.
-        $overridecache->clear_for_user(123);
-        $overridecache->clear_for_group(456);
+        // Check the overrides were created.
+        $overrides = override_cache::get_overrides($quiz->id, $user1->id);
+        $this->assertIsArray($overrides);
+        $this->assertCount(1, $overrides);
+        $this->assertEquals($useroverrideid, reset($overrides)->id);
 
-        $this->assertEmpty($overridecache->get_cached_user_override(123));
-        $this->assertEmpty($overridecache->get_cached_group_override(456));
+        $overrides = override_cache::get_overrides($quiz->id, $user2->id);
+        $this->assertIsArray($overrides);
+        $this->assertCount(1, $overrides);
+        $this->assertEquals($groupoverrideid, reset($overrides)->id);
 
-        // Put some data back.
-        $cache->set($getuserkey->invoke($overridecache, 123), $dummydata);
-        $cache->set($getgroupkey->invoke($overridecache, 456), $dummydata);
+        // Test deleting override by id.
+        $manager->delete_overrides_by_id([$useroverrideid], false);
+        $this->assertNull(override_cache::get_overrides($quiz->id, $user1->id));
+        $this->assertCount(1, override_cache::get_overrides($quiz->id, $user2->id)); // User2 cache should remain.
 
-        // Clear it.
-        $overridecache->clear_for(123, 456);
-        $this->assertEmpty($overridecache->get_cached_user_override(123));
-        $this->assertEmpty($overridecache->get_cached_group_override(456));
+        // Test deleting override by object.
+        $groupoverride = $DB->get_record('quiz_overrides', ['id' => $groupoverrideid], '*', MUST_EXIST);
+        $manager->delete_overrides([$groupoverride], false);
+        $this->assertNull(override_cache::get_overrides($quiz->id, $user1->id));
+        $this->assertNull(override_cache::get_overrides($quiz->id, $user2->id));
 
-        // Put some data back.
-        $cache->set($getuserkey->invoke($overridecache, 123), 'testuser');
-        $cache->set($getgroupkey->invoke($overridecache, 456), 'testgroup');
+        // Test deleting all overrides.
+        $manager->save_override($useroverrideconfig);
+        $manager->save_override($groupoverrideconfig);
 
-        // Purge it.
-        \cache_helper::purge_by_event(override_cache::INVALIDATION_USERDATARESET);
-        $this->assertEmpty($overridecache->get_cached_user_override(123));
-        $this->assertEmpty($overridecache->get_cached_group_override(456));
+        $this->assertCount(1, override_cache::get_overrides($quiz->id, $user1->id));
+        $this->assertCount(1, override_cache::get_overrides($quiz->id, $user2->id));
+
+        $manager->delete_all_overrides(false);
+        $this->assertNull(override_cache::get_overrides($quiz->id, $user1->id));
+        $this->assertNull(override_cache::get_overrides($quiz->id, $user2->id));
+
+        // Test group change events and check cache update.
+        $manager->save_override($useroverrideconfig);
+        $manager->save_override($groupoverrideconfig);
+
+        $this->assertCount(1, override_cache::get_overrides($quiz->id, $user1->id));
+        $this->assertCount(1, override_cache::get_overrides($quiz->id, $user2->id));
+
+        // Add member and check cache update.
+        groups_add_member($group->id, $user1->id);
+        $this->assertCount(2, override_cache::get_overrides($quiz->id, $user1->id));
+        $this->assertCount(1, override_cache::get_overrides($quiz->id, $user2->id));
+
+        // Remove member and check cache update.
+        groups_remove_member($group->id, $user1->id);
+        $this->assertCount(1, override_cache::get_overrides($quiz->id, $user1->id));
+        $this->assertCount(1, override_cache::get_overrides($quiz->id, $user2->id));
+
+        // Delete group and check cache update.
+        groups_delete_group($group->id);
+        $this->assertCount(1, override_cache::get_overrides($quiz->id, $user1->id));
+        $this->assertNull(override_cache::get_overrides($quiz->id, $user2->id));
     }
 }

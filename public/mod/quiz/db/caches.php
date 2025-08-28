@@ -28,11 +28,9 @@ defined('MOODLE_INTERNAL') || die();
 
 $definitions = [
     'overrides' => [
-        'mode' => cache_store::MODE_APPLICATION,
+        'mode' => core_cache\store::MODE_APPLICATION,
         'simplekeys' => true,
-        'datasource' => '\mod_quiz\cache\overrides',
-        'invalidationevents' => [
-            \mod_quiz\local\override_cache::INVALIDATION_USERDATARESET,
-        ],
+        'datasource' => \mod_quiz\local\override_cache::class,
+        'invalidationevents' => [\mod_quiz\local\override_cache::INVALIDATION_RESET_USERDATA],
     ],
 ];

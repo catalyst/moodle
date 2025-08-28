@@ -1,5 +1,5 @@
 <?php
-// This file is part of Moodle - http://moodle.org/
+// This file is part of Moodle - https://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -12,115 +12,165 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace mod_quiz\local;
 
+use cache;
+use core_cache\data_source_interface;
+use core_cache\definition;
+
 /**
- * Cache manager for quiz overrides
+ * Cache encapsulation for quiz overrides.
  *
- * Override cache data is set via its data source, {@see \mod_quiz\cache\overrides}
- * @package   mod_quiz
- * @copyright 2024 Matthew Hilton <matthewhilton@catalyst-au.net>
- * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @package     mod_quiz
+ * @copyright   2025 Catalyst IT Australia Pty Ltd
+ * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class override_cache {
-    /** @var string invalidation event used to purge data when reset_userdata is called, {@see \cache_helper::purge_by_event()} **/
-    public const INVALIDATION_USERDATARESET = 'userdatareset';
+class override_cache implements data_source_interface {
+    /**
+     * @var string Invalidation event used to purge data when reset_userdata is called.
+     * @see \cache_helper::purge_by_event()
+     **/
+    public const INVALIDATION_RESET_USERDATA = 'resetuserdata';
+
+    /** @var ?override_cache The singleton instance for this class. */
+    private static $instance = null;
 
     /**
-     * Create override_cache object and link to quiz
+     * Returns the singleton instance of this class.
      *
-     * @param int $quizid The quiz to link this cache to
+     * @param definition $definition The cache definition.
+     * @return override_cache The singleton instance.
      */
-    public function __construct(
-        /** @var int $quizid ID of quiz cache is being operated on **/
-        protected readonly int $quizid
-    ) {
+    public static function get_instance_for_cache(definition $definition): override_cache {
+        return self::$instance ??= new override_cache();
     }
 
     /**
-     * Returns the override cache
+     * {@inheritdoc}
+     * @see \core_cache\data_source_interface::load_for_cache()
      *
-     * @return \cache
+     * @param string|int $key The key to load.
+     * @return mixed An array of override records or null if none are found or false for invalidation.
      */
-    protected function get_cache(): \cache {
-        return \cache::make('mod_quiz', 'overrides');
-    }
+    public function load_for_cache($key) {
+        global $DB;
 
-    /**
-     * Returns group cache key
-     *
-     * @param int $groupid
-     * @return string the group cache key
-     */
-    protected function get_group_cache_key(int $groupid): string {
-        return "{$this->quizid}_g_{$groupid}";
-    }
-
-    /**
-     * Returns user cache key
-     *
-     * @param int $userid
-     * @return string the user cache key
-     */
-    protected function get_user_cache_key(int $userid): string {
-        return "{$this->quizid}_u_{$userid}";
-    }
-
-    /**
-     * Returns the override value in the cache for the given group
-     *
-     * @param int $groupid group to get cached override data for
-     * @return ?\stdClass override value in the cache for the given group, or null if there is none.
-     */
-    public function get_cached_group_override(int $groupid): ?\stdClass {
-        $raw = $this->get_cache()->get($this->get_group_cache_key($groupid));
-        return empty($raw) || !is_object($raw) ? null : (object) $raw;
-    }
-
-    /**
-     * Returns the override value in the cache for the given user
-     *
-     * @param int $userid user to get cached override data for
-     * @return ?\stdClass the override value in the cache for the given user, or null if there is none.
-     */
-    public function get_cached_user_override(int $userid): ?\stdClass {
-        $raw = $this->get_cache()->get($this->get_user_cache_key($userid));
-        return empty($raw) || !is_object($raw) ? null : (object) $raw;
-    }
-
-    /**
-     * Deletes the cached override data for a given group
-     *
-     * @param int $groupid group to delete data for
-     */
-    public function clear_for_group(int $groupid): void {
-        $this->get_cache()->delete($this->get_group_cache_key($groupid));
-    }
-
-    /**
-     * Deletes the cached override data for the given user
-     *
-     * @param int $userid user to delete data for
-     */
-    public function clear_for_user(int $userid): void {
-        $this->get_cache()->delete($this->get_user_cache_key($userid));
-    }
-
-    /**
-     * Clears the cache for the given user and/or group.
-     *
-     * @param ?int $userid user to delete data for, or null.
-     * @param ?int $groupid group to delete data for, or null.
-     */
-    public function clear_for(?int $userid = null, ?int $groupid = null): void {
-        if (!empty($userid)) {
-            $this->clear_for_user($userid);
+        if ($key === 'lastinvalidation') {
+            return false;
         }
 
-        if (!empty($groupid)) {
-            $this->clear_for_group($groupid);
+        [$quizid, $userid] = self::split_cache_key($key);
+
+        $subquery = "SELECT g.id
+                       FROM {groups} g
+                       JOIN {groups_members} gm ON gm.groupid = g.id
+                       JOIN {quiz} q ON q.course = g.courseid
+                      WHERE q.id = :subqueryquizid AND gm.userid = :subqueryuserid";
+
+        $sql = "SELECT *
+                  FROM {quiz_overrides}
+                 WHERE quiz = :quizid AND (userid = :userid OR groupid IN ($subquery))";
+
+        $records = $DB->get_records_sql($sql, [
+            'quizid' => $quizid,
+            'userid' => $userid,
+            'subqueryquizid' => $quizid,
+            'subqueryuserid' => $userid,
+        ]);
+
+        return empty($records) ? null : $records;
+    }
+
+    /**
+     * {@inheritdoc}
+     * @see \core_cache\data_source_interface::load_many_for_cache()
+     *
+     * @param array $keys An array of keys each of type string.
+     * @return array An array of matching overrides.
+     */
+    public function load_many_for_cache(array $keys) {
+        $results = [];
+        foreach ($keys as $key) {
+            $results[$key] = $this->load_for_cache($key);
         }
+        return $results;
+    }
+
+    /**
+     * Get all overrides for a given quiz and user.
+     *
+     * @param int $quizid The quiz id.
+     * @param int $userid The user id.
+     * @return ?array Array of overrides or null if none found.
+     */
+    public static function get_overrides(int $quizid, int $userid): array|null {
+        $cache = self::get_cache();
+        $key = self::get_cache_key($quizid, $userid);
+        return $cache->get($key);
+    }
+
+    /**
+     * Purge all overrides from the cache.
+     */
+    public static function purge_all(): void {
+        self::get_cache()->purge();
+    }
+
+    /**
+     * Purge overrides for a specific user in a specific quiz.
+     *
+     * @param int $quizid The quiz id.
+     * @param int $userid The user id.
+     */
+    public static function purge_for_user(int $quizid, int $userid): void {
+        self::purge_for_users($quizid, [$userid]);
+    }
+
+    /**
+     * Purge overrides for specific users in a specific quiz.
+     *
+     * @param int $quizid The quiz id.
+     * @param int[] $userids The user ids.
+     */
+    public static function purge_for_users(int $quizid, array $userids): void {
+        if (empty($userids)) {
+            return;
+        }
+
+        $keys = array_map(fn($userid): string => self::get_cache_key($quizid, $userid), $userids);
+        $cache = self::get_cache();
+        $cache->delete_many($keys);
+    }
+
+    /**
+     * Get the cache instance.
+     *
+     * @return cache The cache instance.
+     */
+    private static function get_cache(): cache {
+        return cache::make('mod_quiz', 'overrides');
+    }
+
+    /**
+     * Generate a cache key for a given quiz and user.
+     *
+     * @param int $quizid The quiz id.
+     * @param int $userid The user id.
+     * @return string The cache key.
+     */
+    private static function get_cache_key(int $quizid, int $userid): string {
+        return "{$quizid}_{$userid}";
+    }
+
+    /**
+     * Split a cache key into its quizid and userid components.
+     *
+     * @param string $key The cache key.
+     * @return array An array with quizid and userid.
+     */
+    private static function split_cache_key(string $key): array {
+        return array_map('intval', explode('_', $key));
     }
 }

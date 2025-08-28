@@ -1547,7 +1547,7 @@ function quiz_reset_userdata($data) {
     }
 
     if ($purgeoverrides) {
-        \cache_helper::purge_by_event(\mod_quiz\local\override_cache::INVALIDATION_USERDATARESET);
+        \cache_helper::purge_by_event(override_cache::INVALIDATION_RESET_USERDATA);
     }
 
     return $status;
@@ -2213,49 +2213,39 @@ function quiz_get_coursemodule_info($coursemodule) {
 function mod_quiz_cm_info_dynamic(cm_info $cm) {
     global $USER;
 
-    $cache = new override_cache($cm->instance);
-    $override = $cache->get_cached_user_override($USER->id);
+    $overrides = override_cache::get_overrides($cm->instance, $USER->id);
 
-    if (!$override) {
-        $override = (object) [
-            'timeopen' => null,
-            'timeclose' => null,
-        ];
+    if (empty($overrides)) {
+        return;
     }
 
-    // No need to look for group overrides if there are user overrides for both timeopen and timeclose.
-    if (is_null($override->timeopen) || is_null($override->timeclose)) {
-        $opens = [];
-        $closes = [];
-        $groupings = groups_get_user_groups($cm->course, $USER->id);
-        foreach ($groupings[0] as $groupid) {
-            $groupoverride = $cache->get_cached_group_override($groupid);
-            if (isset($groupoverride->timeopen)) {
-                $opens[] = $groupoverride->timeopen;
-            }
-            if (isset($groupoverride->timeclose)) {
-                $closes[] = $groupoverride->timeclose;
-            }
+    $useroverride = array_filter($overrides, fn($o): bool => !empty($o->userid));
+    $useroverride = reset($useroverride);
+
+    $timeopen = empty($useroverride) ? null : $useroverride->timeopen;
+    $timeclose = empty($useroverride) ? null : $useroverride->timeclose;
+
+    // User overrides take precedence over group overrides.
+    if ($timeopen === null || $timeclose === null) {
+        $groupoverrides = array_filter($overrides, fn($o): bool => !empty($o->groupid));
+        $opens = array_filter(array_column($groupoverrides, 'timeopen'), fn($t): bool => $t !== null);
+        $closes = array_filter(array_column($groupoverrides, 'timeclose'), fn($t): bool => $t !== null);
+
+        if ($timeopen === null && count($opens)) {
+            $timeopen = min($opens);
         }
-        // If there is a user override for a setting, ignore the group override.
-        if (is_null($override->timeopen) && count($opens)) {
-            $override->timeopen = min($opens);
-        }
-        if (is_null($override->timeclose) && count($closes)) {
-            if (in_array(0, $closes)) {
-                $override->timeclose = 0;
-            } else {
-                $override->timeclose = max($closes);
-            }
+
+        if ($timeclose === null && count($closes)) {
+            $timeclose = in_array(0, $closes) ? 0 : max($closes);
         }
     }
 
-    // Populate some other values that can be used in calendar or on dashboard.
-    if (!is_null($override->timeopen)) {
-        $cm->override_customdata('timeopen', $override->timeopen);
+    if ($timeopen !== null) {
+        $cm->override_customdata('timeopen', $timeopen);
     }
-    if (!is_null($override->timeclose)) {
-        $cm->override_customdata('timeclose', $override->timeclose);
+
+    if ($timeclose !== null) {
+        $cm->override_customdata('timeclose', $timeclose);
     }
 }
 
