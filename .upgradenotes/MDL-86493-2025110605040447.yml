@@ -1,0 +1,36 @@
+issueNumber: MDL-86493
+notes:
+  mod_quiz:
+    - message: >-
+        The legacy overrides cache datasource class `\mod_quiz\cache\overrides` is deprecated as of 5.2.
+        It is retained for backwards compatibility and still backed by the legacy cache definition `mod_quiz:overrides`.
+        Contributed plugins should migrate to the new cache and manager described below.
+      type: deprecated
+    - message: >
+        `mod_quiz_cm_info_dynamic()` now uses the new `quiz_overrides` cache via the manager, performing a single cache fetch per quiz/user.
+        This significantly reduces cache calls on course pages with many quizzes and groups.
+        `override_manager::delete_orphaned_group_overrides_in_course()` clears cache entries for enrolled users in the affected course for each impacted quiz.
+        This avoids a global purge and reduces repopulation overhead on busy sites.
+        
+        Overrides cache invalidation event usage is standardised.
+        `quiz_reset_userdata()` purges overrides caches using the shared
+        `userdatareset` event, and cache definitions reference the appropriate class constant.
+      type: changed
+    - message: >
+        New cache `mod_quiz:quiz_overrides` keyed by `quizid_userid` using
+        datasource `\mod_quiz\local\quiz_overrides_cache`.
+        This cache returns all applicable overrides for a user in a quiz (the user override, if any, plus all group overrides for groups they belong to in the quiz's course).
+        
+        New class `\mod_quiz\local\quiz_overrides_cache_manager` to interact
+        with the cache:
+          - `get_overrides(int $quizid, int $userid): array`
+          - `purge_for_user(int $quizid, int $userid): void`
+          - `purge_for_users(int $quizid, array $userids): void`
+          - `purge_for_group(int $quizid, int $groupid): void`
+          - `purge_for_group_members(int $groupid, array $userids): void`
+        
+        Hook callbacks in `db/hooks.php` to keep the cache in sync with group
+        membership changes:
+          - `\core_group\hook\after_group_membership_added`
+          - `\core_group\hook\after_group_membership_removed`
+      type: improved

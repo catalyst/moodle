@@ -15,11 +15,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Cache data source for the quiz overrides.
+ * Legacy cache data source for the quiz overrides.
  *
  * @package   mod_quiz
  * @copyright 2021 Shamim Rezaie <shamim@moodle.com>
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @deprecated since Moodle 5.2.
  */
 
 declare(strict_types=1);
@@ -30,7 +31,10 @@ use core_cache\data_source_interface;
 use core_cache\definition;
 
 /**
- * Class quiz_overrides
+ * Legacy quiz overrides cache data source.
+ *
+ * Kept for backwards compatibility for plugins that may reference this class directly.
+ * The replacement cache can be found at mod_quiz\local\quiz_overrides_cache.
  *
  * @package   mod_quiz
  * @copyright 2021 Shamim Rezaie <shamim@moodle.com>

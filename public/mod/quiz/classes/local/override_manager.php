@@ -16,6 +16,9 @@
 
 namespace mod_quiz\local;
 
+use context_course;
+use core_group\hook\after_group_membership_added;
+use core_group\hook\after_group_membership_removed;
 use mod_quiz\event\group_override_created;
 use mod_quiz\event\group_override_deleted;
 use mod_quiz\event\group_override_updated;
@@ -260,6 +263,13 @@ class override_manager {
         $groupid = $datatoset['groupid'] ?? null;
 
         // Clear the cache.
+        if (!empty($userid)) {
+            quiz_overrides_cache_manager::purge_for_user($this->quiz->id, $userid);
+        }
+        if (!empty($groupid)) {
+            quiz_overrides_cache_manager::purge_for_group($this->quiz->id, $groupid);
+        }
+        // Legacy cache clear.
         $cache = new override_cache($this->quiz->id);
         $cache->clear_for($userid, $groupid);
 
@@ -376,6 +386,7 @@ class override_manager {
         [$sql, $params] = self::get_override_in_sql($this->quiz->id, array_column($overrides, 'id'));
         $DB->delete_records_select('quiz_overrides', $sql, $params);
 
+        // Legacy cache clear.
         $cache = new override_cache($this->quiz->id);
 
         // Perform other cleanup.
@@ -383,7 +394,16 @@ class override_manager {
             $userid = $override->userid ?? null;
             $groupid = $override->groupid ?? null;
 
+            if (!empty($userid)) {
+                quiz_overrides_cache_manager::purge_for_user($this->quiz->id, $userid);
+            }
+            if (!empty($groupid)) {
+                quiz_overrides_cache_manager::purge_for_group($this->quiz->id, $groupid);
+            }
+
+            // Legacy cache clear.
             $cache->clear_for($userid, $groupid);
+
             $this->delete_override_events($userid, $groupid);
 
             if ($shouldlog) {
@@ -620,11 +640,37 @@ class override_manager {
 
         $DB->delete_records_list('quiz_overrides', 'id', array_keys($records));
 
-        // Purge cache for each record.
+        // Clear the cache for all users in the course for each quiz that had an orphaned group override.
+        $quizids = array_unique(array_column($records, 'quiz'));
+        $userids = array_keys(get_enrolled_users(context_course::instance($courseid), '', 0, 'u.id'));
+        foreach ($quizids as $quizid) {
+            quiz_overrides_cache_manager::purge_for_users($quizid, $userids);
+        }
+
+        // Legacy cache clear.
         foreach ($records as $record) {
             $cache = new override_cache($record->quiz);
             $cache->clear_for_group($record->groupid);
         }
-        return array_unique(array_column($records, 'quiz'));
+
+        return $quizids;
+    }
+
+    /**
+     * Hook callback to clear relevant cache entries when a user is added to a group.
+     *
+     * @param after_group_membership_added $hook
+     */
+    public static function after_group_membership_added(after_group_membership_added $hook): void {
+        quiz_overrides_cache_manager::purge_for_group_members($hook->groupinstance->id, $hook->userids);
+    }
+
+    /**
+     * Hook callback to clear relevant cache entries when a user is removed from a group.
+     *
+     * @param after_group_membership_removed $hook
+     */
+    public static function after_group_membership_removed(after_group_membership_removed $hook): void {
+        quiz_overrides_cache_manager::purge_for_group_members($hook->groupinstance->id, $hook->userids);
     }
 }

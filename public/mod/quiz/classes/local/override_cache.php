@@ -17,13 +17,13 @@
 namespace mod_quiz\local;
 
 /**
- * Cache manager for quiz overrides
- *
- * Override cache data is set via its data source, {@see \mod_quiz\cache\overrides}
- * @package   mod_quiz
- * @copyright 2024 Matthew Hilton <matthewhilton@catalyst-au.net>
- * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @deprecated since Moodle 5.2, use \mod_quiz\local\quiz_overrides_cache_manager instead.
  */
+#[\core\attribute\deprecated(
+    replacement: quiz_overrides_cache_manager::class,
+    since: '5.2',
+    mdl: 'MDL-86493'
+)]
 class override_cache {
     /** @var string invalidation event used to purge data when reset_userdata is called, {@see \cache_helper::purge_by_event()} **/
     public const INVALIDATION_USERDATARESET = 'userdatareset';
@@ -69,23 +69,31 @@ class override_cache {
     }
 
     /**
-     * Returns the override value in the cache for the given group
-     *
-     * @param int $groupid group to get cached override data for
-     * @return ?\stdClass override value in the cache for the given group, or null if there is none.
+     * @deprecated since 5.2, use \mod_quiz\local\quiz_overrides_cache_manager::get_overrides() instead.
      */
+    #[\core\attribute\deprecated(
+        replacement: '\mod_quiz\local\quiz_overrides_cache_manager::get_overrides()',
+        since: '5.2',
+        mdl: 'MDL-86493'
+    )]
     public function get_cached_group_override(int $groupid): ?\stdClass {
+        \core\deprecation::emit_deprecation_if_present([self::class, __FUNCTION__]);
+
         $raw = $this->get_cache()->get($this->get_group_cache_key($groupid));
         return empty($raw) || !is_object($raw) ? null : (object) $raw;
     }
 
     /**
-     * Returns the override value in the cache for the given user
-     *
-     * @param int $userid user to get cached override data for
-     * @return ?\stdClass the override value in the cache for the given user, or null if there is none.
+     * @deprecated since 5.2, use \mod_quiz\local\quiz_overrides_cache_manager::get_overrides() instead.
      */
+    #[\core\attribute\deprecated(
+        replacement: '\mod_quiz\local\quiz_overrides_cache_manager::get_overrides()',
+        since: '5.2',
+        mdl: 'MDL-86493'
+    )]
     public function get_cached_user_override(int $userid): ?\stdClass {
+        \core\deprecation::emit_deprecation_if_present([self::class, __FUNCTION__]);
+
         $raw = $this->get_cache()->get($this->get_user_cache_key($userid));
         return empty($raw) || !is_object($raw) ? null : (object) $raw;
     }
