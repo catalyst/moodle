@@ -1549,7 +1549,7 @@ function quiz_reset_userdata($data) {
     }
 
     if ($purgeoverrides) {
-        \cache_helper::purge_by_event(quiz_overrides_cache::INVALIDATION_USERDATARESET);
+        \cache_helper::purge_by_event(quiz_overrides_cache::INVALIDATION_EVENT_RESET_USERDATA);
     }
 
     return $status;
