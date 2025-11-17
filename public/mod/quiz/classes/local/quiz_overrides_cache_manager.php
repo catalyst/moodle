@@ -19,10 +19,8 @@ namespace mod_quiz\local;
 use cache;
 
 /**
- * Manager/Facade for the new quiz_overrides cache operations.
- *
- * This centralises interactions with the 'mod_quiz:quiz_overrides' cache to
- * avoid duplication and keep concerns separate from the datasource.
+ * Manages cache operations for quiz overrides.
+ * Please do not use this class directly. Instead, use methods from \mod_quiz\local\override_manager.
  *
  * @package     mod_quiz
  * @copyright   2025 Catalyst IT Australia Pty Ltd
