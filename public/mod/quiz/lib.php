@@ -27,7 +27,7 @@
 
 use core_question\local\bank\question_bank_helper;
 use mod_quiz\local\override_manager;
-use mod_quiz\local\quiz_overrides_cache;
+use mod_quiz\cache\quiz_overrides_cache;
 use qbank_managecategories\helper;
 
 defined('MOODLE_INTERNAL') || die();

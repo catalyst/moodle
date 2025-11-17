@@ -18,7 +18,7 @@ notes:
       type: changed
     - message: >
         New cache `mod_quiz:quiz_overrides` keyed by `quizid_userid` using
-        datasource `\mod_quiz\local\quiz_overrides_cache`.
+        datasource `\mod_quiz\cache\quiz_overrides_cache`.
         This cache returns all applicable overrides for a user in a quiz (the user override, if any, plus all group overrides for groups they belong to in the quiz's course).
         
         New class `\mod_quiz\local\quiz_overrides_cache_manager` to interact

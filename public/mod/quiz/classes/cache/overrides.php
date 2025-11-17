@@ -34,7 +34,7 @@ use core_cache\definition;
  * Legacy quiz overrides cache data source.
  *
  * Kept for backwards compatibility for plugins that may reference this class directly.
- * The replacement cache can be found at mod_quiz\local\quiz_overrides_cache.
+ * The replacement cache can be found at mod_quiz\cache\quiz_overrides_cache.
  *
  * @package   mod_quiz
  * @copyright 2021 Shamim Rezaie <shamim@moodle.com>

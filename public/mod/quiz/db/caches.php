@@ -43,7 +43,7 @@ $definitions = [
     'quiz_overrides' => [
         'mode' => core_cache\store::MODE_APPLICATION,
         'simplekeys' => true,
-        'datasource' => \mod_quiz\local\quiz_overrides_cache::class,
-        'invalidationevents' => [\mod_quiz\local\quiz_overrides_cache::INVALIDATION_USERDATARESET],
+        'datasource' => \mod_quiz\cache\quiz_overrides_cache::class,
+        'invalidationevents' => [\mod_quiz\cache\quiz_overrides_cache::INVALIDATION_USERDATARESET],
     ],
 ];

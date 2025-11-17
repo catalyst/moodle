@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
-namespace mod_quiz\local;
+namespace mod_quiz\cache;
 
 use core_cache\data_source_interface;
 use core_cache\definition;
