@@ -27,19 +27,7 @@ declare(strict_types=1);
 defined('MOODLE_INTERNAL') || die();
 
 $definitions = [
-    // Legacy overrides cache retained for backwards compatibility.
-    // This provides the original per-user or per-group single-record lookup.
-    'overrides' => [
-        'mode' => core_cache\store::MODE_APPLICATION,
-        'simplekeys' => true,
-        'datasource' => '\mod_quiz\cache\overrides',
-        'invalidationevents' => [
-            \mod_quiz\local\override_cache::INVALIDATION_USERDATARESET,
-        ],
-    ],
-
-    // New overrides cache keyed by quizid_userid returning all applicable overrides
-    // (user override + all group overrides for the user in that quiz's course).
+    // Overrides cache keyed by quizid_userid returning all applicable overrides.
     'quiz_overrides' => [
         'mode' => core_cache\store::MODE_APPLICATION,
         'simplekeys' => true,

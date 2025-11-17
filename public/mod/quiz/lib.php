@@ -40,7 +40,6 @@ use mod_quiz\question\display_options;
 use mod_quiz\question\qubaids_for_quiz;
 use mod_quiz\question\qubaids_for_users_attempts;
 use core_question\statistics\questions\all_calculated_for_qubaid_condition;
-use mod_quiz\local\override_cache;
 use mod_quiz\quiz_attempt;
 use mod_quiz\quiz_settings;
 

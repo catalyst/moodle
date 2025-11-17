@@ -269,9 +269,6 @@ class override_manager {
         if (!empty($groupid)) {
             quiz_overrides_cache_manager::purge_for_group($this->quiz->id, $groupid);
         }
-        // Legacy cache clear.
-        $cache = new override_cache($this->quiz->id);
-        $cache->clear_for($userid, $groupid);
 
         // Trigger moodle events.
         if (empty($formdata['id'])) {
@@ -386,9 +383,6 @@ class override_manager {
         [$sql, $params] = self::get_override_in_sql($this->quiz->id, array_column($overrides, 'id'));
         $DB->delete_records_select('quiz_overrides', $sql, $params);
 
-        // Legacy cache clear.
-        $cache = new override_cache($this->quiz->id);
-
         // Perform other cleanup.
         foreach ($overrides as $override) {
             $userid = $override->userid ?? null;
@@ -400,9 +394,6 @@ class override_manager {
             if (!empty($groupid)) {
                 quiz_overrides_cache_manager::purge_for_group($this->quiz->id, $groupid);
             }
-
-            // Legacy cache clear.
-            $cache->clear_for($userid, $groupid);
 
             $this->delete_override_events($userid, $groupid);
 
@@ -696,12 +687,6 @@ class override_manager {
         $userids = array_keys(get_enrolled_users(context_course::instance($courseid), '', 0, 'u.id'));
         foreach ($quizids as $quizid) {
             quiz_overrides_cache_manager::purge_for_users($quizid, $userids);
-        }
-
-        // Legacy cache clear.
-        foreach ($records as $record) {
-            $cache = new override_cache($record->quiz);
-            $cache->clear_for_group($record->groupid);
         }
 
         return $quizids;
