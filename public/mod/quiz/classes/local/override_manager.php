@@ -617,6 +617,57 @@ class override_manager {
     }
 
     /**
+     * Computes the effective overridden open/close times for a user for a given quiz.
+     *
+     * @param int $quizid The quiz ID.
+     * @param int $userid The user ID.
+     * @return array Array with optional keys 'timeopen' and 'timeclose'.
+     */
+    public static function get_time_overrides(int $quizid, int $userid): array {
+        $overrides = quiz_overrides_cache_manager::get_overrides($quizid, $userid);
+
+        if (empty($overrides)) {
+            return [];
+        }
+
+        // Get user override (there should be at most one per user per quiz).
+        $useroverride = array_filter($overrides, fn($o): bool => !empty($o->userid));
+        $useroverride = reset($useroverride);
+
+        $timeopen = empty($useroverride) ? null : $useroverride->timeopen;
+        $timeclose = empty($useroverride) ? null : $useroverride->timeclose;
+
+        // If either value is still null, check group overrides.
+        if ($timeopen === null || $timeclose === null) {
+            $groupoverrides = array_filter($overrides, fn($o): bool => !empty($o->groupid));
+            if (!empty($groupoverrides)) {
+                $opens = array_filter(array_column($groupoverrides, 'timeopen'), fn($t): bool => $t !== null);
+                $closes = array_filter(array_column($groupoverrides, 'timeclose'), fn($t): bool => $t !== null);
+
+                // Get the earliest open time.
+                if ($timeopen === null && count($opens)) {
+                    $timeopen = min($opens);
+                }
+
+                // Get the latest close time, unless any are 0 which takes precedence.
+                if ($timeclose === null && count($closes)) {
+                    $timeclose = in_array(0, $closes) ? 0 : max($closes);
+                }
+            }
+        }
+
+        $result = [];
+        if ($timeopen !== null) {
+            $result['timeopen'] = $timeopen;
+        }
+        if ($timeclose !== null) {
+            $result['timeclose'] = $timeclose;
+        }
+
+        return $result;
+    }
+
+    /**
      * Deletes orphaned group overrides in a given course.
      * Note - permissions are not checked and events are not logged for performance reasons.
      *

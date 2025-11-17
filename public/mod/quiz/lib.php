@@ -26,8 +26,8 @@
  */
 
 use core_question\local\bank\question_bank_helper;
+use mod_quiz\local\override_manager;
 use mod_quiz\local\quiz_overrides_cache;
-use mod_quiz\local\quiz_overrides_cache_manager;
 use qbank_managecategories\helper;
 
 defined('MOODLE_INTERNAL') || die();
@@ -2214,40 +2214,8 @@ function quiz_get_coursemodule_info($coursemodule) {
  */
 function mod_quiz_cm_info_dynamic(cm_info $cm) {
     global $USER;
-
-    $overrides = quiz_overrides_cache_manager::get_overrides($cm->instance, $USER->id);
-
-    if (empty($overrides)) {
-        return;
-    }
-
-    $useroverride = array_filter($overrides, fn($o): bool => !empty($o->userid));
-    $useroverride = reset($useroverride);
-
-    $timeopen = empty($useroverride) ? null : $useroverride->timeopen;
-    $timeclose = empty($useroverride) ? null : $useroverride->timeclose;
-
-    // User overrides take precedence over group overrides.
-    if ($timeopen === null || $timeclose === null) {
-        $groupoverrides = array_filter($overrides, fn($o): bool => !empty($o->groupid));
-        $opens = array_filter(array_column($groupoverrides, 'timeopen'), fn($t): bool => $t !== null);
-        $closes = array_filter(array_column($groupoverrides, 'timeclose'), fn($t): bool => $t !== null);
-
-        if ($timeopen === null && count($opens)) {
-            $timeopen = min($opens);
-        }
-
-        if ($timeclose === null && count($closes)) {
-            $timeclose = in_array(0, $closes) ? 0 : max($closes);
-        }
-    }
-
-    if ($timeopen !== null) {
-        $cm->override_customdata('timeopen', $timeopen);
-    }
-
-    if ($timeclose !== null) {
-        $cm->override_customdata('timeclose', $timeclose);
+    foreach (override_manager::get_time_overrides($cm->instance, $USER->id) as $key => $value) {
+        $cm->override_customdata($key, $value);
     }
 }
 
