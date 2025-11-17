@@ -20,7 +20,7 @@ use advanced_testcase;
 use context_module;
 
 /**
- * Tests for the new quiz_overrides cache and manager.
+ * Tests for the quiz_overrides cache and manager.
  *
  * @package     mod_quiz
  * @copyright   2025 Catalyst IT Australia Pty Ltd
@@ -28,7 +28,7 @@ use context_module;
  * @covers      \mod_quiz\cache\quiz_overrides_cache
  * @covers      \mod_quiz\local\quiz_overrides_cache_manager
  */
-final class quiz_overrides_cache_test extends advanced_testcase {
+final class quiz_overrides_cache_manager_test extends advanced_testcase {
     /**
      * Tests the quiz overrides cache response and invalidation flow.
      */
