@@ -954,6 +954,9 @@ final class override_manager_test extends \advanced_testcase {
         // Check the calendar event was made.
         $this->assertCount(1, calendar_get_events(0, 999, [$user->id], false, false));
 
+        // Check that the cache was made.
+        $this->assertNotEmpty(quiz_overrides_cache_manager::get_overrides($quizobj->get_quizid(), $user->id));
+
         // Capture events.
         $sink = $this->redirectEvents();
 
@@ -967,6 +970,9 @@ final class override_manager_test extends \advanced_testcase {
 
         // Check the calendar event was deleted.
         $this->assertCount(0, calendar_get_events(0, 999, [$user->id], false, false));
+
+        // Check that the cache was cleared.
+        $this->assertEmpty(quiz_overrides_cache_manager::get_overrides($quizobj->get_quizid(), $user->id));
 
         // Check the event was logged.
         if ($checkeventslogged) {
