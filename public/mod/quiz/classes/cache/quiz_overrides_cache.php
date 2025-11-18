@@ -31,12 +31,6 @@ use core_cache\definition;
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class quiz_overrides_cache implements data_source_interface {
-    /**
-     * @var string Invalidation event used to purge data when reset_userdata is called.
-     * @see \cache_helper::purge_by_event()
-     */
-    public const INVALIDATION_EVENT_RESET_USERDATA = 'resetuserdata';
-
     /** @var ?quiz_overrides_cache Singleton instance. */
     private static $instance = null;
 

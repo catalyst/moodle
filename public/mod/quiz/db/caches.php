@@ -32,6 +32,5 @@ $definitions = [
         'mode' => core_cache\store::MODE_APPLICATION,
         'simplekeys' => true,
         'datasource' => \mod_quiz\cache\quiz_overrides_cache::class,
-        'invalidationevents' => [\mod_quiz\cache\quiz_overrides_cache::INVALIDATION_EVENT_RESET_USERDATA],
     ],
 ];

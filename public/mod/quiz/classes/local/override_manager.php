@@ -300,7 +300,7 @@ class override_manager {
      */
     public function delete_all_overrides(bool $shouldlog = true): void {
         global $DB;
-        $overrides = $DB->get_records('quiz_overrides', ['quiz' => $this->quiz->id], '', 'id,userid,groupid');
+        $overrides = $DB->get_records('quiz_overrides', ['quiz' => $this->quiz->id], '', 'id,quiz,userid,groupid');
         $this->delete_overrides($overrides, $shouldlog);
     }
 
@@ -369,6 +369,14 @@ class override_manager {
                 throw new \coding_exception("All overrides must specify an ID");
             }
 
+            if (empty($override->quiz)) {
+                throw new \coding_exception("All overrides must specify a quiz ID");
+            }
+
+            if ($override->quiz != $this->quiz->id) {
+                throw new \coding_exception("All overrides must belong to the quiz linked to this manager");
+            }
+
             // Sanity check that user xor group is specified.
             // User or group is required to clear the cache.
             self::ensure_userid_xor_groupid_set($override->userid ?? null, $override->groupid ?? null);
@@ -384,16 +392,10 @@ class override_manager {
         $DB->delete_records_select('quiz_overrides', $sql, $params);
 
         // Perform other cleanup.
+        quiz_overrides_cache_manager::purge_for_overrides($overrides);
         foreach ($overrides as $override) {
             $userid = $override->userid ?? null;
             $groupid = $override->groupid ?? null;
-
-            if (!empty($userid)) {
-                quiz_overrides_cache_manager::purge_for_user($this->quiz->id, $userid);
-            }
-            if (!empty($groupid)) {
-                quiz_overrides_cache_manager::purge_for_group($this->quiz->id, $groupid);
-            }
 
             $this->delete_override_events($userid, $groupid);
 

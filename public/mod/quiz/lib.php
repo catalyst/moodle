@@ -27,7 +27,7 @@
 
 use core_question\local\bank\question_bank_helper;
 use mod_quiz\local\override_manager;
-use mod_quiz\cache\quiz_overrides_cache;
+use mod_quiz\local\quiz_overrides_cache_manager;
 use qbank_managecategories\helper;
 
 defined('MOODLE_INTERNAL') || die();
@@ -1500,31 +1500,39 @@ function quiz_reset_userdata($data) {
             'error' => false];
     }
 
-    $purgeoverrides = false;
+    $overrides = [];
 
     // Remove user overrides.
     if (!empty($data->reset_quiz_user_overrides)) {
-        $DB->delete_records_select('quiz_overrides',
-                'quiz IN (SELECT id FROM {quiz} WHERE course = ?) AND userid IS NOT NULL', [$data->courseid]);
+        $select = 'quiz IN (SELECT id FROM {quiz} WHERE course = ?) AND userid IS NOT NULL';
+        $params = [$data->courseid];
+
+        $overrides = array_merge($overrides, $DB->get_records_select('quiz_overrides', $select, $params));
+        $DB->delete_records_select('quiz_overrides', $select, $params);
         $status[] = [
             'component' => $componentstr,
             'item' => get_string('useroverrides', 'quiz'),
             'error' => false];
-        $purgeoverrides = true;
     }
     // Remove group overrides.
     if (!empty($data->reset_quiz_group_overrides)) {
-        $DB->delete_records_select('quiz_overrides',
-                'quiz IN (SELECT id FROM {quiz} WHERE course = ?) AND groupid IS NOT NULL', [$data->courseid]);
+        $select = 'quiz IN (SELECT id FROM {quiz} WHERE course = ?) AND groupid IS NOT NULL';
+        $params = [$data->courseid];
+
+        $overrides = array_merge($overrides, $DB->get_records_select('quiz_overrides', $select, $params));
+        $DB->delete_records_select('quiz_overrides', $select, $params);
         $status[] = [
             'component' => $componentstr,
             'item' => get_string('groupoverrides', 'quiz'),
             'error' => false];
-        $purgeoverrides = true;
     }
 
     // Updating dates - shift may be negative too.
     if ($data->timeshift) {
+        $select = 'quiz IN (SELECT id FROM {quiz} WHERE course = ?)';
+        $params = [$data->courseid];
+
+        $overrides = array_merge($overrides, $DB->get_records_select('quiz_overrides', $select, $params));
         $DB->execute("UPDATE {quiz_overrides}
                          SET timeopen = timeopen + ?
                        WHERE quiz IN (SELECT id FROM {quiz} WHERE course = ?)
@@ -1533,8 +1541,6 @@ function quiz_reset_userdata($data) {
                          SET timeclose = timeclose + ?
                        WHERE quiz IN (SELECT id FROM {quiz} WHERE course = ?)
                          AND timeclose <> 0", [$data->timeshift, $data->courseid]);
-
-        $purgeoverrides = true;
 
         // Any changes to the list of dates that needs to be rolled should be same during course restore and course reset.
         // See MDL-9367.
@@ -1547,8 +1553,8 @@ function quiz_reset_userdata($data) {
             'error' => false];
     }
 
-    if ($purgeoverrides) {
-        \cache_helper::purge_by_event(quiz_overrides_cache::INVALIDATION_EVENT_RESET_USERDATA);
+    if (!empty($overrides)) {
+        quiz_overrides_cache_manager::purge_for_overrides($overrides);
     }
 
     return $status;

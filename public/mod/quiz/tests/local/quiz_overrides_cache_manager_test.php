@@ -209,4 +209,44 @@ final class quiz_overrides_cache_manager_test extends advanced_testcase {
         $this->assertCount(1, quiz_overrides_cache_manager::get_overrides($data->quiz->id, $data->user1->id));
         $this->assertSame([], quiz_overrides_cache_manager::get_overrides($data->quiz->id, $data->user2->id));
     }
+
+    /**
+     * Ensures that purging the cache for an override invalidates the cache for all affected users.
+     */
+    public function test_purge_for_override(): void {
+        global $DB;
+
+        $data = $this->create_test_data();
+
+        $useroverrideid = $data->manager->save_override([
+            'userid' => $data->user1->id,
+            'timelimit' => HOURSECS,
+        ]);
+        $data->manager->save_override([
+            'groupid' => $data->group->id,
+            'timelimit' => HOURSECS * 2,
+        ]);
+        $records = $DB->get_records('quiz_overrides');
+
+        $this->assertCount(1, quiz_overrides_cache_manager::get_overrides($data->quiz->id, $data->user1->id));
+        $this->assertCount(1, quiz_overrides_cache_manager::get_overrides($data->quiz->id, $data->user2->id));
+
+        $DB->delete_records('quiz_overrides', ['quiz' => $data->quiz->id]);
+
+        // Cached data still exists until the manager purges the relevant entries.
+        $this->assertCount(1, quiz_overrides_cache_manager::get_overrides($data->quiz->id, $data->user1->id));
+        $this->assertCount(1, quiz_overrides_cache_manager::get_overrides($data->quiz->id, $data->user2->id));
+
+        // Purge for the user override only.
+        quiz_overrides_cache_manager::purge_for_overrides([$records[$useroverrideid]]);
+
+        $this->assertSame([], quiz_overrides_cache_manager::get_overrides($data->quiz->id, $data->user1->id));
+        $this->assertCount(1, quiz_overrides_cache_manager::get_overrides($data->quiz->id, $data->user2->id));
+
+        // Purge for all overrides.
+        quiz_overrides_cache_manager::purge_for_overrides($records);
+
+        $this->assertSame([], quiz_overrides_cache_manager::get_overrides($data->quiz->id, $data->user1->id));
+        $this->assertSame([], quiz_overrides_cache_manager::get_overrides($data->quiz->id, $data->user2->id));
+    }
 }

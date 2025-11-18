@@ -79,8 +79,16 @@ class quiz_overrides_cache_manager {
      * @param int $groupid The group id.
      */
     public static function purge_for_group(int $quizid, int $groupid): void {
+        self::purge_for_groups($quizid, [$groupid]);
+    }
+
+    public static function purge_for_groups(int $quizid, array $groupids): void {
         global $DB;
-        $userids = $DB->get_records('groups_members', ['groupid' => $groupid], '', 'userid');
+        [$insql, $params] = $DB->get_in_or_equal($groupids);
+        $sql = "SELECT DISTINCT userid
+                           FROM {groups_members}
+                          WHERE groupid {$insql}";
+        $userids = $DB->get_records_sql($sql, $params);
         if (!empty($userids)) {
             self::purge_for_users($quizid, array_keys($userids));
         }
@@ -98,6 +106,34 @@ class quiz_overrides_cache_manager {
         $records = $DB->get_records('quiz_overrides', ['groupid' => $groupid], '', 'id,quiz');
         foreach (array_unique(array_column($records, 'quiz')) as $quizid) {
             self::purge_for_users($quizid, $userids);
+        }
+    }
+
+    /**
+     * Purge overrides for all users and groups found in the given override records.
+     *
+     * @param array $overrides Records containing at least quiz id (quiz) and either a user id (userid) or group id (groupid).
+     */
+    public static function purge_for_overrides(array $overrides): void {
+        $useridsbyquiz = [];
+        $groupidsbyquiz = [];
+
+        foreach ($overrides as $override) {
+            if (!empty($override->userid)) {
+                $useridsbyquiz[$override->quiz][] = (int) $override->userid;
+            }
+
+            if (!empty($override->groupid)) {
+                $groupidsbyquiz[$override->quiz][] = (int) $override->groupid;
+            }
+        }
+
+        foreach ($useridsbyquiz as $quizid => $userids) {
+            self::purge_for_users($quizid, array_values(array_unique($userids)));
+        }
+
+        foreach ($groupidsbyquiz as $quizid => $groupids) {
+            self::purge_for_groups($quizid, array_values(array_unique($groupids)));
         }
     }
 
