@@ -82,6 +82,12 @@ class quiz_overrides_cache_manager {
         self::purge_for_groups($quizid, [$groupid]);
     }
 
+    /**
+     * Purge overrides for all members of the given groups in a specific quiz.
+     *
+     * @param int $quizid The quiz id.
+     * @param array $groupids The group ids.
+     */
     public static function purge_for_groups(int $quizid, array $groupids): void {
         global $DB;
         [$insql, $params] = $DB->get_in_or_equal($groupids);
