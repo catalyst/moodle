@@ -101,7 +101,7 @@ class group extends base {
             $this->get_entity_name()
         ))
             ->add_joins($this->get_joins())
-            ->add_field("{$groupsalias}.name")
+            ->add_fields("{$groupsalias}.name, {$groupsalias}.id")
             ->add_fields(context_helper::get_preload_record_columns_sql($contextalias))
             ->set_is_sortable(true)
             ->set_callback(static function(?string $name, stdClass $group): string {
