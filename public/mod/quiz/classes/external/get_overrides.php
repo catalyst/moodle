@@ -85,6 +85,8 @@ class get_overrides extends external_api {
             'timelimit' => new external_value(PARAM_INT, 'Override time limit value', VALUE_DEFAULT, null),
             'attempts' => new external_value(PARAM_INT, 'Override attempts value', VALUE_DEFAULT, null),
             'password' => new external_value(PARAM_TEXT, 'Override password', VALUE_DEFAULT, null),
+            'reason' => new external_value(PARAM_RAW, 'Override reason', VALUE_DEFAULT, null),
+            'reasonformat' => new external_value(PARAM_INT, 'Override reason text format', VALUE_DEFAULT, null),
         ]);
 
         return new external_single_structure([
