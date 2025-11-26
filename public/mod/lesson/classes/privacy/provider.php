@@ -107,6 +107,7 @@ class provider implements
             'maxattempts' => 'privacy:metadata:overrides:maxattempts',
             'retake' => 'privacy:metadata:overrides:retake',
             'password' => 'privacy:metadata:overrides:password',
+            'reason' => 'privacy:metadata:overrides:reason',
         ], 'privacy:metadata:overrides');
 
         $collection->add_user_preference('lesson_view', 'privacy:metadata:userpref:lessonview');
@@ -265,9 +266,15 @@ class provider implements
                 'maxattempts' => $record->maxattempts,
                 'retake' => $record->retake !== null ? transform::yesno($record->retake) : null,
                 'password' => $record->password,
+                'reason' => $record->reason,
+                'reasonformat' => $record->reasonformat ?? FORMAT_MOODLE,
             ];
         }, function($lessonid, $data) use ($lessonidstocmids) {
             $context = context_module::instance($lessonidstocmids[$lessonid]);
+            if (isset($data->reason)) {
+                $data->reason = format_text($data->reason, $data->reasonformat, ['context' => $context]);
+                unset($data->reasonformat);
+            }
             writer::with_context($context)->export_related_data([], 'overrides', $data);
         });
 
