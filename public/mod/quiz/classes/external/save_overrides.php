@@ -17,6 +17,7 @@
 namespace mod_quiz\external;
 
 use core_external\external_api;
+use core_external\external_format_value;
 use core_external\external_function_parameters;
 use core_external\external_multiple_structure;
 use core_external\external_single_structure;
@@ -47,7 +48,7 @@ class save_overrides extends external_api {
             'attempts' => new external_value(PARAM_INT, 'Quiz override attempt count', VALUE_DEFAULT, null),
             'password' => new external_value(PARAM_TEXT, 'Quiz override password', VALUE_DEFAULT, null),
             'reason' => new external_value(PARAM_RAW, 'Quiz override reason', VALUE_OPTIONAL),
-            'reasonformat' => new external_value(PARAM_INT, 'Quiz override reason text format', VALUE_OPTIONAL),
+            'reasonformat' => new external_format_value('reason', VALUE_OPTIONAL),
         ]);
 
         return new external_function_parameters([
