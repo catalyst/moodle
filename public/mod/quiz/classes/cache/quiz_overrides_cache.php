@@ -34,29 +34,21 @@ class quiz_overrides_cache implements data_source_interface {
     /** @var ?quiz_overrides_cache Singleton instance. */
     private static $instance = null;
 
-    /**
-     * {@inheritdoc}
-     *
-     * @param definition $definition
-     * @return object
-     */
+    #[\Override]
     public static function get_instance_for_cache(definition $definition): quiz_overrides_cache {
         return self::$instance ??= new quiz_overrides_cache();
     }
 
-    /**
-     * {@inheritdoc}
-     *
-     * @param string|int $key The key to load in the format "{quizid}_{userid}".
-     * @return mixed An array of override records (empty array when none) or false for invalidation.
-     */
+    #[\Override]
     public function load_for_cache($key) {
         global $DB;
 
+        // Core cache invalidation asks datasources for this internal key.
         if ($key === 'lastinvalidation') {
             return false;
         }
 
+        // All regular keys use the "{quizid}_{userid}" format.
         [$quizid, $userid] = self::split_cache_key((string) $key);
 
         $subquery = "SELECT g.id
@@ -69,22 +61,15 @@ class quiz_overrides_cache implements data_source_interface {
                   FROM {quiz_overrides}
                  WHERE quiz = :quizid AND (userid = :userid OR groupid IN ($subquery))";
 
-        $records = $DB->get_records_sql($sql, [
+        return $DB->get_records_sql($sql, [
             'quizid' => $quizid,
             'userid' => $userid,
             'subqueryquizid' => $quizid,
             'subqueryuserid' => $userid,
         ]);
-
-        return $records ?: [];
     }
 
-    /**
-     * {@inheritdoc}
-     *
-     * @param array $keys An array of keys each of which will be string|int.
-     * @return array An array of matching data items.
-     */
+    #[\Override]
     public function load_many_for_cache(array $keys) {
         $results = [];
         foreach ($keys as $key) {

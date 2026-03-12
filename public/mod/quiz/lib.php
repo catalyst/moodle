@@ -2219,7 +2219,7 @@ function quiz_get_coursemodule_info($coursemodule) {
  */
 function mod_quiz_cm_info_dynamic(cm_info $cm) {
     global $USER;
-    foreach (override_manager::get_time_overrides($cm->instance, $USER->id) as $key => $value) {
+    foreach (override_manager::get_effective_open_close_times($cm->instance, $USER->id) as $key => $value) {
         $cm->override_customdata($key, $value);
     }
 }

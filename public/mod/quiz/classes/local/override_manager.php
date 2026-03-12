@@ -616,7 +616,7 @@ class override_manager {
      * @param int $userid The user ID.
      * @return array Array with optional keys 'timeopen' and 'timeclose'.
      */
-    public static function get_time_overrides(int $quizid, int $userid): array {
+    public static function get_effective_open_close_times(int $quizid, int $userid): array {
         $overrides = quiz_overrides_cache_manager::get_overrides($quizid, $userid);
 
         if (empty($overrides)) {

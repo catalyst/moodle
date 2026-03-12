@@ -1169,3 +1169,4 @@ $string['randomsystemwithsubcat'] = 'Any system-level category';
 // Deprecated since Moodle 5.2.
 $string['gobacktoquiz'] = 'Go back';
 $string['selectquestionbank'] = 'Select question bank';
+$string['cachedef_overrides'] = 'User and group override information';
