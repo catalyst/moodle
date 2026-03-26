@@ -152,8 +152,10 @@ function user_create_user($user, $updatepassword = true, $triggerevent = true) {
  * @param bool $updatepassword if true, authentication plugin will update password.
  * @param bool $triggerevent set false if user_updated event should not be triggred.
  *             This will not affect user_password_updated event triggering.
+ * @param stdClass|null $currentrecord Current user record from the database.
+ *                      This parameter can be used to avoid an extra DB call.
  */
-function user_update_user($user, $updatepassword = true, $triggerevent = true) {
+function user_update_user($user, $updatepassword = true, $triggerevent = true, ?stdClass $currentrecord = null) {
     global $DB;
 
     // Set the timecreate field to the current time.
@@ -161,7 +163,7 @@ function user_update_user($user, $updatepassword = true, $triggerevent = true) {
         $user = (object) $user;
     }
 
-    $currentrecord = $DB->get_record('user', ['id' => $user->id]);
+    $currentrecord ??= $DB->get_record('user', ['id' => $user->id]);
 
     // Dispatch the hook for pre user update actions.
     $hook = new \core_user\hook\before_user_updated(

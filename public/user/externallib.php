@@ -567,6 +567,10 @@ class core_user_external extends \core_external\external_api {
                 'maxfiles'       => 1,
                 'accepted_types' => 'optimised_image');
 
+        // Fetch all existing user records.
+        $userids = array_column($params['users'], 'id');
+        $existingusers = $DB->get_records_list('user', 'id', $userids);
+
         $warnings = array();
         foreach ($params['users'] as $user) {
             // Catch any exception while updating a user and return it as a warning.
@@ -574,7 +578,8 @@ class core_user_external extends \core_external\external_api {
                 $transaction = $DB->start_delegated_transaction();
 
                 // First check the user exists.
-                if (!$existinguser = core_user::get_user($user['id'])) {
+                $existinguser = $existingusers[$user['id']] ?? null;
+                if (!$existinguser) {
                     throw new moodle_exception('invaliduserid', '', '', null,
                             'Invalid user ID');
                 }
@@ -618,7 +623,7 @@ class core_user_external extends \core_external\external_api {
                     }
                 }
 
-                user_update_user($user, true, false);
+                user_update_user($user, true, false, $existinguser);
 
                 $userobject = (object)$user;
 
