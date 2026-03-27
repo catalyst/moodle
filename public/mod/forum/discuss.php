@@ -24,6 +24,8 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use mod_forum\local\preferences;
+
 require_once('../../config.php');
 
 $d      = required_param('d', PARAM_INT);                // Discussion ID
@@ -251,7 +253,7 @@ if ($mode) {
     $displaymode = $saveddisplaymode;
 }
 
-if (get_user_preferences('forum_useexperimentalui', false)) {
+if (preferences::get_useexperimentalui()) {
     if ($displaymode == FORUM_MODE_NESTED) {
         $displaymode = FORUM_MODE_NESTED_V2;
     }

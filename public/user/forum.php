@@ -22,6 +22,8 @@
  * @package core_user
  */
 
+use mod_forum\local\preferences;
+
 require_once('../config.php');
 require_once($CFG->libdir.'/gdlib.php');
 require_once($CFG->dirroot.'/user/forum_form.php');
@@ -39,7 +41,7 @@ list($user, $course) = useredit_setup_preference_page($userid, $courseid);
 $forumform = new user_edit_forum_form(null, array('userid' => $user->id));
 
 $user->markasreadonnotification = get_user_preferences('forum_markasreadonnotification', 1, $user->id);
-$user->useexperimentalui = get_user_preferences('forum_useexperimentalui', 0, $user->id);
+$user->useexperimentalui = (int) preferences::get_useexperimentalui($user->id);
 $forumform->set_data($user);
 
 $redirect = new moodle_url("/user/preferences.php", array('userid' => $user->id));

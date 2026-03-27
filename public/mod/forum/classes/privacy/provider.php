@@ -497,6 +497,17 @@ class provider implements
         }
         writer::export_user_preference('mod_forum', 'forum_discussionlistsortorder',
             $discussionlistsortorder, $discussionlistsortorderdescription);
+
+        $useexperimentalui = get_user_preferences('forum_useexperimentalui', null, $userid);
+        if ($useexperimentalui !== null) {
+            $useexperimentaluidescription = $useexperimentalui ? get_string('yes') : get_string('no');
+            writer::export_user_preference(
+                'mod_forum',
+                'forum_useexperimentalui',
+                $useexperimentalui,
+                $useexperimentaluidescription
+            );
+        }
     }
 
 

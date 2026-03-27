@@ -62,7 +62,7 @@ Feature: As a teacher, you can manually lock individual discussions when viewing
     And I follow "Preferences" in the user menu
     And I click on "Forum preferences" "link"
     And I set the following fields to these values:
-      | Use experimental nested discussion view | Yes |
+      | Alternative nested discussion view | Yes |
     And I press "Save changes"
     And I am on "Course 1" course homepage
     And I navigate to post "Discussion 1" in "Test forum name" forum

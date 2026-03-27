@@ -23,6 +23,7 @@
  */
 
 use mod_forum\grades\forum_gradeitem;
+use mod_forum\local\preferences;
 
 require_once('../../config.php');
 
@@ -87,7 +88,7 @@ if ($mode) {
     $displaymode = $saveddisplaymode;
 }
 
-if (get_user_preferences('forum_useexperimentalui', false)) {
+if (preferences::get_useexperimentalui()) {
     if ($displaymode == FORUM_MODE_NESTED) {
         $displaymode = FORUM_MODE_NESTED_V2;
     }

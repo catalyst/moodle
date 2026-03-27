@@ -31,7 +31,7 @@ Feature: Notification shown when user edit profile or preferences
     And I click on "Save changes" "button"
     And I should see "Changes saved"
     And I follow "Forum preferences"
-    And I set the field "Use experimental nested discussion view" to "Yes"
+    And I set the field "Alternative nested discussion view" to "Yes"
     And I click on "Save changes" "button"
     And I should see "Changes saved"
 

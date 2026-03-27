@@ -57,10 +57,10 @@ Feature: An admin or teacher sets the post threshold for blocking and warning
       | Subject | Test post subject two |
       | Message | Test post message two |
     And I should see "Add discussion topic"
-    #Now verify that when "Use experimental nested discussion view" is set, the user should see same warning in the Reply.
+    #Now verify that when "Alternative nested discussion view" is set, the user should see same warning in the Reply.
     And I follow "Preferences" in the user menu
     And I click on "Forum preferences" "link"
-    And I set the field "Use experimental nested discussion view" to "Yes"
+    And I set the field "Alternative nested discussion view" to "Yes"
     And I press "Save changes"
     And I am on the "Test forum name" "forum activity" page
     And I click on "Test post subject two" "link"

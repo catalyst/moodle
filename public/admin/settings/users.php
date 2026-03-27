@@ -89,6 +89,17 @@ if ($hassiteconfig || has_any_capability($capabilities, $systemcontext)) { // Sp
         $temp->add(new admin_setting_configselect('defaultpreference_autosubscribe', new lang_string('autosubscribe'),
             '', 1, $choices));
 
+        $choices = [];
+        $choices['0'] = new lang_string('no');
+        $choices['1'] = new lang_string('yes');
+        $temp->add(new admin_setting_configselect(
+            'defaultpreference_useexperimentalui',
+            new lang_string('useexperimentalui', 'mod_forum'),
+            new lang_string('useexperimentalui_desc', 'mod_forum'),
+            '0',
+            $choices
+        ));
+
         $choices = array();
         $choices['0'] = new lang_string('trackforumsno');
         $choices['1'] = new lang_string('trackforumsyes');

@@ -2015,6 +2015,7 @@ final class provider_test extends \core_privacy\tests\provider_testcase {
         set_user_preference('markasreadonnotification', 0, $user);
         set_user_preference('forum_discussionlistsortorder', \mod_forum\local\vaults\discussion_list::SORTORDER_STARTER_ASC,
             $user);
+        set_user_preference('forum_useexperimentalui', 0, $user);
 
         // Export test users preferences.
         provider::export_user_preferences($user->id);
@@ -2033,6 +2034,11 @@ final class provider_test extends \core_privacy\tests\provider_testcase {
             'value' => 1,
             'description' => get_string('autosubscribeyes'),
         ], $preferences['autosubscribe']);
+
+        $this->assertEquals((object) [
+            'value' => 0,
+            'description' => get_string('no'),
+        ], $preferences['forum_useexperimentalui']);
 
         $this->assertEquals((object) [
             'value' => 0,

@@ -36,6 +36,7 @@ use mod_forum\local\factories\exporter as exporter_factory;
 use mod_forum\local\factories\url as url_factory;
 use mod_forum\local\factories\vault as vault_factory;
 use mod_forum\local\managers\capability as capability_manager;
+use mod_forum\local\preferences;
 use mod_forum\local\renderers\posts as posts_renderer;
 use forum_portfolio_caller;
 use core\output\notification;
@@ -291,10 +292,11 @@ class discussion {
      */
     private function get_display_mode_selector_html(int $displaymode, stdClass $user): string {
         $baseurl = $this->baseurl;
+        $useexperimentalui = preferences::get_useexperimentalui($user);
         $select = new single_select(
             $baseurl,
             'mode',
-            forum_get_layout_modes(get_user_preferences('forum_useexperimentalui', false, $user)),
+            forum_get_layout_modes($useexperimentalui),
             $displaymode,
             null,
             'mode'
