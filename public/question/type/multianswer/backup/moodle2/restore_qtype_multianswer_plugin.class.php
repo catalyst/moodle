@@ -95,13 +95,17 @@ class restore_qtype_multianswer_plugin extends restore_qtype_plugin {
         // Now that all the questions have been restored, let's process
         // the created question_multianswer sequences (list of question ids).
         $rs = $DB->get_recordset_sql("
-                SELECT qma.id, qma.sequence
+                SELECT qma.id, qma.sequence, qma.question
                   FROM {question_multianswer} qma
                   JOIN {backup_ids_temp} bi ON bi.newitemid = qma.question
                  WHERE bi.backupid = ?
                    AND bi.itemname = 'question_created'",
                 array($this->get_restoreid()));
+
+        $restoredquestionids = [];
         foreach ($rs as $rec) {
+            $restoredquestionids[] = $rec->question;
+
             $sequencearr = preg_split('/,/', $rec->sequence, -1, PREG_SPLIT_NO_EMPTY);
             if (substr_count($rec->sequence, ',') + 1 != count($sequencearr)) {
                 $this->task->log('Invalid sequence found in restored multianswer question ' . $rec->id, backup::LOG_WARNING);
@@ -134,6 +138,13 @@ class restore_qtype_multianswer_plugin extends restore_qtype_plugin {
             }
         }
         $rs->close();
+
+        // Migrate files from legacy backups to the correct file area.
+        if (!empty($restoredquestionids)) {
+            $task = new \qtype_multianswer\task\copy_legacy_answer_files();
+            $task->set_custom_data(['questionids' => $restoredquestionids]);
+            \core\task\manager::queue_adhoc_task($task, true);
+        }
     }
 
     public function recode_response($questionid, $sequencenumber, array $response) {

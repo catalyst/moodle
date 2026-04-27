@@ -152,6 +152,19 @@ abstract class qtype_multianswer_subq_renderer_base extends qtype_renderer {
             question_graded_automatically $subq);
 
     /**
+     * Format question text and process embedded files using the parent question context.
+     *
+     * @param question_attempt $qa the current attempt.
+     * @param string $text the text to format.
+     * @param int $format the text format.
+     * @return string formatted text.
+     */
+    protected function format_embedded_text(question_attempt $qa, string $text, int $format): string {
+        $question = $qa->get_question();
+        return $question->format_text($text, $format, $qa, 'question', 'questiontext', $question->id);
+    }
+
+    /**
      * Render the feedback pop-up contents.
      *
      * @param question_graded_automatically $subq the subquestion.
@@ -327,15 +340,21 @@ class qtype_multianswer_textfield_renderer extends qtype_multianswer_subq_render
             $correctanswer = $subq->get_correct_answer();
         }
 
-        $feedbackpopup = $this->feedback_popup($subq, $matchinganswer->fraction,
-                $subq->format_text($matchinganswer->feedback, $matchinganswer->feedbackformat,
-                        $qa, 'question', 'answerfeedback', $matchinganswer->id),
-                s($correctanswer->answer), $options);
+        $feedbackpopup = $this->feedback_popup(
+            $subq,
+            $matchinganswer->fraction,
+            $this->format_embedded_text($qa, $matchinganswer->feedback, $matchinganswer->feedbackformat),
+            s($correctanswer->answer),
+            $options
+        );
 
         $output = html_writer::start_tag('span', ['class' => 'subquestion']);
 
-        $output .= html_writer::tag('label', $this->get_answer_label(),
-                array('class' => 'subq accesshide', 'for' => $inputattributes['id']));
+        $output .= html_writer::tag(
+            'label',
+            $this->get_answer_label(),
+            ['class' => 'subq accesshide', 'for' => $inputattributes['id']]
+        );
         $output .= html_writer::empty_tag('input', $inputattributes);
         $output .= $this->get_feedback_image($feedbackimg, $feedbackpopup);
         $output .= html_writer::end_tag('span');
@@ -368,8 +387,7 @@ class qtype_multianswer_multichoice_inline_renderer
         $rightanswer = null;
         foreach ($subq->get_order($qa) as $value => $ansid) {
             $ans = $subq->answers[$ansid];
-            $choices[$value] = $subq->format_text($ans->answer, $ans->answerformat,
-                    $qa, 'question', 'answer', $ansid);
+            $choices[$value] = $this->format_embedded_text($qa, $ans->answer, $ans->answerformat);
             if ($subq->is_choice_selected($response, $value)) {
                 $matchinganswer = $ans;
             }
@@ -397,15 +415,20 @@ class qtype_multianswer_multichoice_inline_renderer
         if (!$matchinganswer) {
             $matchinganswer = new question_answer(0, '', null, '', FORMAT_HTML);
         }
-        $feedbackpopup = $this->feedback_popup($subq, $matchinganswer->fraction,
-                $subq->format_text($matchinganswer->feedback, $matchinganswer->feedbackformat,
-                        $qa, 'question', 'answerfeedback', $matchinganswer->id),
-                $subq->format_text($rightanswer->answer, $rightanswer->answerformat,
-                        $qa, 'question', 'answer', $rightanswer->id), $options);
+        $feedbackpopup = $this->feedback_popup(
+            $subq,
+            $matchinganswer->fraction,
+            $this->format_embedded_text($qa, $matchinganswer->feedback, $matchinganswer->feedbackformat),
+            $this->format_embedded_text($qa, $rightanswer->answer, $rightanswer->answerformat),
+            $options
+        );
 
         $output = html_writer::start_tag('span', array('class' => 'subquestion'));
-        $output .= html_writer::tag('label', $this->get_answer_label(),
-                array('class' => 'subq accesshide', 'for' => $inputattributes['id']));
+        $output .= html_writer::tag(
+            'label',
+            $this->get_answer_label(),
+            ['class' => 'subq accesshide', 'for' => $inputattributes['id']]
+        );
         $output .= $select;
         $output .= $this->get_feedback_image($feedbackimg, $feedbackpopup);
         $output .= html_writer::end_tag('span');
@@ -468,16 +491,19 @@ class qtype_multianswer_multichoice_vertical_renderer extends qtype_multianswer_
 
             $result .= $this->choice_wrapper_start($class);
             $result .= html_writer::empty_tag('input', $inputattributes);
-            $result .= html_writer::tag('label', $subq->format_text($ans->answer,
-                    $ans->answerformat, $qa, 'question', 'answer', $ansid),
-                    array('for' => $inputattributes['id'], 'class' => 'form-check-label text-body'));
+            $result .= html_writer::tag(
+                'label',
+                $this->format_embedded_text($qa, $ans->answer, $ans->answerformat),
+                ['for' => $inputattributes['id'], 'class' => 'form-check-label text-body']
+            );
             $result .= $feedbackimg;
 
             if ($options->feedback && $isselected && trim($ans->feedback)) {
-                $result .= html_writer::tag('div',
-                        $subq->format_text($ans->feedback, $ans->feedbackformat,
-                                $qa, 'question', 'answerfeedback', $ansid),
-                        array('class' => 'specificfeedback'));
+                $result .= html_writer::tag(
+                    'div',
+                    $this->format_embedded_text($qa, $ans->feedback, $ans->feedbackformat),
+                    ['class' => 'specificfeedback']
+                );
             }
 
             $result .= $this->choice_wrapper_end();
@@ -499,9 +525,11 @@ class qtype_multianswer_multichoice_vertical_renderer extends qtype_multianswer_
             foreach ($subq->answers as $ans) {
                 if (question_state::graded_state_for_fraction($ans->fraction) ==
                         question_state::$gradedright) {
-                    $feedback[] = get_string('correctansweris', 'qtype_multichoice',
-                            $subq->format_text($ans->answer, $ans->answerformat,
-                                    $qa, 'question', 'answer', $ansid));
+                    $feedback[] = get_string(
+                        'correctansweris',
+                        'qtype_multichoice',
+                        $this->format_embedded_text($qa, $ans->answer, $ans->answerformat)
+                    );
                     break;
                 }
             }
@@ -661,16 +689,19 @@ class qtype_multianswer_multiresponse_vertical_renderer extends qtype_multianswe
 
             $result .= $this->choice_wrapper_start($class);
             $result .= html_writer::empty_tag('input', $inputattributes);
-            $result .= html_writer::tag('label', $subq->format_text($ans->answer,
-                                                                    $ans->answerformat, $qa, 'question', 'answer', $ansid),
-                                        ['for' => $inputattributes['id'], 'class' => 'form-check-label text-body']);
+            $result .= html_writer::tag(
+                'label',
+                $this->format_embedded_text($qa, $ans->answer, $ans->answerformat),
+                ['for' => $inputattributes['id'], 'class' => 'form-check-label text-body']
+            );
             $result .= $feedbackimg;
 
             if ($options->feedback && $isselected && trim($ans->feedback)) {
-                $result .= html_writer::tag('div',
-                                            $subq->format_text($ans->feedback, $ans->feedbackformat,
-                                                               $qa, 'question', 'answerfeedback', $ansid),
-                                            array('class' => 'specificfeedback'));
+                $result .= html_writer::tag(
+                    'div',
+                    $this->format_embedded_text($qa, $ans->feedback, $ans->feedbackformat),
+                    ['class' => 'specificfeedback']
+                );
             }
 
             $result .= $this->choice_wrapper_end();
@@ -692,7 +723,7 @@ class qtype_multianswer_multiresponse_vertical_renderer extends qtype_multianswe
             $correct = [];
             foreach ($subq->answers as $ans) {
                 if (question_state::graded_state_for_fraction($ans->fraction) != question_state::$gradedwrong) {
-                    $correct[] = $subq->format_text($ans->answer, $ans->answerformat, $qa, 'question', 'answer', $ans->id);
+                    $correct[] = $this->format_embedded_text($qa, $ans->answer, $ans->answerformat);
                 }
             }
             $correct = '<ul><li>'.implode('</li><li>', $correct).'</li></ul>';

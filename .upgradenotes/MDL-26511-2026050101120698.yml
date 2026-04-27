@@ -1,0 +1,9 @@
+issueNumber: MDL-26511
+notes:
+  qtype_multianswer:
+    - message: >-
+        Improved embedded file support for qtype_multianswer (Cloze) questions.
+        This change is backwards compatible with existing and imported
+        questions, with a new adhoc task for migrating legacy files to the
+        correct file area.
+      type: improved

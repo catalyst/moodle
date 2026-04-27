@@ -52,5 +52,13 @@ function xmldb_qtype_multianswer_upgrade($oldversion) {
     // Automatically generated Moodle v5.2.0 release upgrade line.
     // Put any upgrade step following this.
 
+    if ($oldversion < 2026042001) {
+        mtrace('Queueing legacy Cloze answer file copy task.');
+        $task = new \qtype_multianswer\task\copy_legacy_answer_files();
+        \core\task\manager::queue_adhoc_task($task, true);
+
+        upgrade_plugin_savepoint(true, 2026042001, 'qtype', 'multianswer');
+    }
+
     return true;
 }

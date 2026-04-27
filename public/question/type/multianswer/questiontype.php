@@ -407,6 +407,10 @@ function qtype_multianswer_initialise_multichoice_subquestion($wrapped) {
 
 function qtype_multianswer_extract_question($text) {
     // Variable $text is an array [text][format][itemid].
+
+    $rewritefileurls = fn($content): string =>
+        empty($text['itemid']) ? $content : file_rewrite_urls_to_pluginfile($content, $text['itemid']);
+
     $question = new stdClass();
     $question->qtype = 'multianswer';
     $question->questiontext = $text;
@@ -498,7 +502,7 @@ function qtype_multianswer_extract_question($text) {
         $wrapped->answer   = array();
         $wrapped->fraction = array();
         $wrapped->feedback = array();
-        $wrapped->questiontext['text'] = $answerregs[0];
+        $wrapped->questiontext['text'] = $rewritefileurls($answerregs[0]);
         $wrapped->questiontext['format'] = FORMAT_HTML;
         $wrapped->questiontext['itemid'] = '';
         $answerindex = 0;
@@ -519,7 +523,7 @@ function qtype_multianswer_extract_question($text) {
                 $feedback = html_entity_decode(
                         $altregs[ANSWER_ALTERNATIVE_REGEX_FEEDBACK], ENT_QUOTES, 'UTF-8');
                 $feedback = str_replace('\}', '}', $feedback);
-                $wrapped->feedback["{$answerindex}"]['text'] = str_replace('\#', '#', $feedback);
+                $wrapped->feedback["{$answerindex}"]['text'] = $rewritefileurls(str_replace('\#', '#', $feedback));
                 $wrapped->feedback["{$answerindex}"]['format'] = FORMAT_HTML;
                 $wrapped->feedback["{$answerindex}"]['itemid'] = '';
             } else {
@@ -543,7 +547,7 @@ function qtype_multianswer_extract_question($text) {
                 $answer = html_entity_decode(
                         $altregs[ANSWER_ALTERNATIVE_REGEX_ANSWER], ENT_QUOTES, 'UTF-8');
                 $answer = str_replace('\}', '}', $answer);
-                $wrapped->answer["{$answerindex}"] = str_replace('\#', '#', $answer);
+                $wrapped->answer["{$answerindex}"] = $rewritefileurls(str_replace('\#', '#', $answer));
                 if ($wrapped->qtype == 'multichoice') {
                     $wrapped->answer["{$answerindex}"] = array(
                             'text' => $wrapped->answer["{$answerindex}"],

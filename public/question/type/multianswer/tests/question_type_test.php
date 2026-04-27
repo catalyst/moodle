@@ -16,6 +16,9 @@
 
 namespace qtype_multianswer;
 
+use context_system;
+use context_user;
+use html_writer;
 use qtype_multianswer;
 use qtype_multianswer_edit_form;
 use qtype_multichoice_base;
@@ -112,6 +115,112 @@ final class question_type_test extends \advanced_testcase {
 
     public function test_name(): void {
         $this->assertEquals($this->qtype->name(), 'multianswer');
+    }
+
+    /**
+     * Create a file in the current user's draft file area and return its item id and URL.
+     *
+     * @param string $filename the draft file name.
+     * @return array containing the draft item id and the draft file URL.
+     */
+    protected function create_draft_file_url(string $filename): array {
+        global $USER;
+
+        $draftitemid = file_get_unused_draft_itemid();
+        get_file_storage()->create_file_from_string([
+            'contextid' => context_user::instance($USER->id)->id,
+            'component' => 'user',
+            'filearea' => 'draft',
+            'itemid' => $draftitemid,
+            'filepath' => '/',
+            'filename' => $filename,
+        ], 'image contents');
+
+        return [
+            $draftitemid,
+            \moodle_url::make_draftfile_url($draftitemid, '/', $filename)->out(false),
+        ];
+    }
+
+    /**
+     * Test that parsing Cloze syntax rewrites draft file URLs found inside embedded subquestion fields.
+     */
+    public function test_extract_question_rewrites_draft_file_urls_in_subquestion_fields(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        // Create a dummy image file in the user's draft area.
+        $filename = 'cat.png';
+        [$draftitemid, $imageurl] = $this->create_draft_file_url($filename);
+
+        // Parse a Cloze question containing draft image URLs in the correct answer and its feedback.
+        $img = html_writer::img($imageurl, 'Cat');
+        $question = \qtype_multianswer_extract_question([
+            'text' => "Choose {1:MULTICHOICE_V:={$img}#{$img}~Dog}",
+            'format' => FORMAT_HTML,
+            'itemid' => $draftitemid,
+        ]);
+
+        // Verify the extracted subquestion fields with draft URLs are rewritten to @@PLUGINFILE@@.
+        $pluginfileurl = "@@PLUGINFILE@@/{$filename}";
+        $this->assertStringContainsString($pluginfileurl, $question->options->questions[1]->questiontext['text']);
+        $this->assertStringContainsString($pluginfileurl, $question->options->questions[1]->answer[0]['text']);
+        $this->assertStringContainsString($pluginfileurl, $question->options->questions[1]->feedback[0]['text']);
+
+        // Verify subquestion fields without draft URLs remain untouched.
+        $this->assertStringNotContainsString($pluginfileurl, $question->options->questions[1]->answer[1]['text']);
+        $this->assertStringNotContainsString($pluginfileurl, $question->options->questions[1]->feedback[1]['text']);
+
+        // Verify the resulting parent question text simply contains the placeholder.
+        $this->assertEquals('Choose {#1}', $question->questiontext['text']);
+    }
+
+    /**
+     * Test that saving a Cloze question stores embedded subquestion answer files in the parent questiontext area.
+     */
+    public function test_save_question_supports_files_in_multichoice_subquestion_answers(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        // Create a test question category and a dummy draft file for testing the save process.
+        $syscontext = context_system::instance();
+        /** @var \core_question_generator $generator */
+        $generator = $this->getDataGenerator()->get_plugin_generator('core_question');
+        $category = $generator->create_question_category(['contextid' => $syscontext->id]);
+
+        $filename = 'cat.png';
+        [$draftitemid, $imageurl] = $this->create_draft_file_url($filename);
+
+        // Simulate submitting the question edit form with a subquestion featuring the embedded image.
+        $fromform = test_question_maker::get_question_form_data('multianswer');
+        $fromform->name = 'Cloze with answer image';
+        $fromform->category = "{$category->id},{$syscontext->id}";
+
+        $img = html_writer::img($imageurl, 'Cat');
+        $fromform->questiontext = [
+            'text' => "Choose {1:MULTICHOICE_V:={$img}~Dog}",
+            'format' => FORMAT_HTML,
+            'itemid' => $draftitemid,
+        ];
+
+        // Process saving the question to invoke format conversions and file merging.
+        $question = $this->qtype->save_question(new stdClass(), $fromform);
+        $questiondata = question_bank::load_question_data($question->id);
+        $subquestion = reset($questiondata->options->questions);
+        $answer = reset($subquestion->options->answers);
+
+        // Assert the subquestion answer correctly references the permanent @@PLUGINFILE@@ format.
+        $this->assertStringContainsString("@@PLUGINFILE@@/{$filename}", $answer->answer);
+
+        // Assert the physical file was permanently saved to the main parent questiontext file area.
+        $this->assertTrue(get_file_storage()->file_exists(
+            $syscontext->id,
+            'question',
+            'questiontext',
+            $question->id,
+            '/',
+            $filename
+        ));
     }
 
     public function test_can_analyse_responses(): void {
