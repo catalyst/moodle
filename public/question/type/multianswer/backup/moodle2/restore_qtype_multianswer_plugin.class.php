@@ -136,6 +136,26 @@ class restore_qtype_multianswer_plugin extends restore_qtype_plugin {
         $rs->close();
     }
 
+    /**
+     * Migrate legacy answer files once all restore file processing has completed.
+     */
+    public function after_restore_question() {
+        global $DB;
+
+        $restoredquestionids = $DB->get_fieldset_sql(
+            "SELECT qma.question
+               FROM {question_multianswer} qma
+               JOIN {backup_ids_temp} bi ON bi.newitemid = qma.question
+              WHERE bi.backupid = ?
+                AND bi.itemname = 'question_created'",
+            [$this->get_restoreid()]
+        );
+
+        if (!empty($restoredquestionids)) {
+            qtype_multianswer\task\copy_legacy_answer_files::copy_legacy_answer_files_to_questiontext($restoredquestionids);
+        }
+    }
+
     public function recode_response($questionid, $sequencenumber, array $response) {
         global $DB;
 

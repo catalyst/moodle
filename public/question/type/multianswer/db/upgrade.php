@@ -63,5 +63,14 @@ function xmldb_qtype_multianswer_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026051100, 'qtype', 'multianswer');
     }
 
+    if ($oldversion < 2026051101) {
+        mtrace('Queueing legacy Cloze answer file copy task.');
+        $task = new \qtype_multianswer\task\copy_legacy_answer_files();
+        \core\task\manager::queue_adhoc_task($task, true);
+
+        upgrade_plugin_savepoint(true, 2026051101, 'qtype', 'multianswer');
+    }
+
+
     return true;
 }
