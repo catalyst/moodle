@@ -16,14 +16,27 @@
 
 namespace qtype_multianswer;
 
+use backup;
+use backup_controller;
+use core_courseformat\local\cmactions;
+use html_writer;
+use question_bank;
+use restore_controller;
+
+defined('MOODLE_INTERNAL') || die();
+
+global $CFG;
+require_once($CFG->dirroot . '/course/lib.php');
+
 /**
- * Unit tests for
+ * Unit tests for restore behaviour of the multianswer question type.
  *
  * @package   qtype_multianswer
  * @copyright 2025 onwards Catalyst IT EU {@link https://catalyst-eu.net}
  * @author    Mark Johnson <mark.johnson@catalyst-eu.net>
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers \restore_qtype_multianswer_plugin
+ * @covers \qtype_multianswer\task\copy_legacy_answer_files
  */
 final class restore_test extends \advanced_testcase {
     /**
@@ -94,5 +107,91 @@ final class restore_test extends \advanced_testcase {
 
         // There should be no additional questions created during the restore.
         $this->assertEquals($initialcount + 3, $DB->count_records('question'));
+    }
+
+    /**
+     * Test legacy answer area files in multianswer question are migrated during restore.
+     */
+    public function test_restore_migrates_legacy_files(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        // Create a course.
+        $generator = $this->getDataGenerator();
+        $course1 = $generator->create_course();
+        $questiongenerator = $generator->get_plugin_generator('core_question');
+
+        // Create a quiz.
+        $quiz = $generator->get_plugin_generator('mod_quiz')->create_instance(['course' => $course1->id]);
+        $quizcontext = \context_module::instance($quiz->cmid);
+
+        // Create a question category and multianswer question in the quiz.
+        $cat = $questiongenerator->create_question_category(['contextid' => $quizcontext->id]);
+        $question = $questiongenerator->create_question('multianswer', 'twosubq', ['category' => $cat->id]);
+        quiz_add_quiz_question($question->id, $quiz);
+
+        $questiondata = question_bank::load_question_data($question->id);
+
+        // Inject dummy file into legacy answer file area (simulating a historic backup source).
+        $subquestion = end($questiondata->options->questions);
+        $answer = reset($subquestion->options->answers);
+        $answer->answer = html_writer::img('@@PLUGINFILE@@/legacy.png', 'Legacy');
+        $DB->update_record('question_answers', $answer);
+
+        $fs = get_file_storage();
+        $fs->create_file_from_string([
+            'contextid' => $questiondata->contextid,
+            'component' => 'question',
+            'filearea' => 'answer',
+            'itemid' => $answer->id,
+            'filepath' => '/',
+            'filename' => 'legacy.png',
+        ], 'answer image contents');
+
+        // Confirm the source legacy file exists only in the child answer area before restore.
+        $this->assertTrue($fs->file_exists(
+            $questiondata->contextid,
+            'question',
+            'answer',
+            $answer->id,
+            '/',
+            'legacy.png'
+        ));
+        $this->assertFalse($fs->file_exists(
+            $questiondata->contextid,
+            'question',
+            'questiontext',
+            $question->id,
+            '/',
+            'legacy.png'
+        ));
+
+        // Run restore.
+        $cmactions = new cmactions($course1);
+        $cmactions->duplicate($quiz->cmid);
+
+        // The question table should now possess both the original question and one restored copy.
+        $restoredquestions = $DB->get_records('question', ['qtype' => 'multianswer']);
+        $this->assertCount(2, $restoredquestions);
+        $restoredquestion = array_values(
+            array_filter(
+                $restoredquestions,
+                fn($questionrecord): bool => (int) $questionrecord->id !== (int) $question->id
+            )
+        );
+        $this->assertCount(1, $restoredquestion);
+        $newquestion = reset($restoredquestion);
+        $newquestiondata = question_bank::load_question_data($newquestion->id);
+
+        // Verify the legacy answer file has been migrated to the correct file area in the restored quiz.
+        $this->assertTrue($fs->file_exists(
+            $newquestiondata->contextid,
+            'question',
+            'questiontext',
+            $newquestion->id,
+            '/',
+            'legacy.png'
+        ));
     }
 }
