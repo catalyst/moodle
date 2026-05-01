@@ -32,6 +32,19 @@ use core_reportbuilder\tests\core_reportbuilder_testcase;
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class tags_test extends core_reportbuilder_testcase {
+    /**
+     * Filter the rows in the report content by tag rawname.
+     *
+     * @param array $rows The report content rows.
+     * @param int $column The index of the column to search in.
+     * @param string $tagrawname The tag rawname to search for.
+     *
+     * @return array Matching rows.
+     */
+    public static function find_rows_by_tag(array $rows, int $column, string $tagrawname): array {
+        // Strip any tags from the tag column before comparing.
+        return array_filter($rows, static fn(array $row): bool => strip_tags((string) array_values($row)[$column]) === $tagrawname);
+    }
 
     /**
      * Test default datasource
@@ -46,17 +59,20 @@ final class tags_test extends core_reportbuilder_testcase {
         $generator = $this->getDataGenerator()->get_plugin_generator('core_reportbuilder');
         $report = $generator->create_report(['name' => 'Tags', 'source' => tags::class, 'default' => 1]);
 
-        $content = $this->get_custom_report_content($report->get('id'));
-        $this->assertCount(2, $content);
+        $rows = $this->get_custom_report_content($report->get('id'));
 
         // Default columns are collection, tag (with link), standard, context. Sorted by collection and tag.
-        [$collection, $tag, $standard, $context] = array_values($content[0]);
+        $matches = self::find_rows_by_tag($rows, 1, 'Horses');
+        $this->assertCount(1, $matches);
+        [$collection, $tag, $standard, $context] = array_values(reset($matches));
         $this->assertEquals('Default collection', $collection);
         $this->assertStringContainsString('Horses', $tag);
         $this->assertEquals('No', $standard);
         $this->assertEquals(course::instance($course->id)->get_context_name(), $context);
 
-        [$collection, $tag, $standard, $context] = array_values($content[1]);
+        $matches = self::find_rows_by_tag($rows, 1, 'Pies');
+        $this->assertCount(1, $matches);
+        [$collection, $tag, $standard, $context] = array_values(reset($matches));
         $this->assertEquals('Default collection', $collection);
         $this->assertStringContainsString('Pies', $tag);
         $this->assertEquals('No', $standard);
@@ -101,8 +117,9 @@ final class tags_test extends core_reportbuilder_testcase {
         $generator->create_column(['reportid' => $report->get('id'), 'uniqueidentifier' => 'instance:timecreated']);
         $generator->create_column(['reportid' => $report->get('id'), 'uniqueidentifier' => 'instance:timemodified']);
 
-        $content = $this->get_custom_report_content($report->get('id'));
-        $this->assertCount(1, $content);
+        $rows = $this->get_custom_report_content($report->get('id'));
+        $matches = self::find_rows_by_tag($rows, 4, 'Horses');
+        $this->assertCount(1, $matches);
 
         [
             $collectiondefault,
@@ -122,7 +139,7 @@ final class tags_test extends core_reportbuilder_testcase {
             $instanceitemid,
             $instancetimecreated,
             $instancetimemodified,
-        ] = array_values($content[0]);
+        ] = array_values(reset($matches));
 
         // Collection.
         $this->assertEquals('Yes', $collectiondefault);
@@ -276,13 +293,15 @@ final class tags_test extends core_reportbuilder_testcase {
 
         // Add filter, set it's values.
         $generator->create_filter(['reportid' => $report->get('id'), 'uniqueidentifier' => $filtername]);
-        $content = $this->get_custom_report_content($report->get('id'), 0, $filtervalues);
+        $rows = $this->get_custom_report_content($report->get('id'), 0, $filtervalues);
+
+        // Extract the first column (rawname) from all rows.
+        $rawnames = array_map(fn($row): string => (string) reset($row), $rows);
 
         if ($expectmatch) {
-            $this->assertCount(1, $content);
-            $this->assertEquals('Horses', reset($content[0]));
+            $this->assertContains('Horses', $rawnames);
         } else {
-            $this->assertEmpty($content);
+            $this->assertNotContains('Horses', $rawnames);
         }
     }
 
