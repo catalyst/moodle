@@ -18,9 +18,8 @@ namespace qtype_multianswer;
 
 use backup;
 use backup_controller;
-use core\task\manager;
+use core_courseformat\local\cmactions;
 use html_writer;
-use qtype_multianswer\task\copy_legacy_answer_files;
 use question_bank;
 use restore_controller;
 
@@ -113,7 +112,7 @@ final class restore_test extends \advanced_testcase {
     /**
      * Test legacy answer area files in multianswer question are migrated during restore.
      */
-    public function test_restore_queues_legacy_files_migration_task(): void {
+    public function test_restore_migrates_legacy_files(): void {
         global $DB;
         $this->resetAfterTest();
         $this->setAdminUser();
@@ -123,18 +122,18 @@ final class restore_test extends \advanced_testcase {
         $course1 = $generator->create_course();
         $questiongenerator = $generator->get_plugin_generator('core_question');
 
-        // Add the question to a quiz to ensure it is included directly within the backup scope.
+        // Create a quiz.
         $quiz = $generator->get_plugin_generator('mod_quiz')->create_instance(['course' => $course1->id]);
         $quizcontext = \context_module::instance($quiz->cmid);
 
-        // Create a question category and multianswer question in the quiz context so a module duplicate copies the question.
+        // Create a question category and multianswer question in the quiz.
         $cat = $questiongenerator->create_question_category(['contextid' => $quizcontext->id]);
         $question = $questiongenerator->create_question('multianswer', 'twosubq', ['category' => $cat->id]);
         quiz_add_quiz_question($question->id, $quiz);
 
         $questiondata = question_bank::load_question_data($question->id);
 
-        // Inject dummy file into legacy answer file area (simulating a pre-patch backup source).
+        // Inject dummy file into legacy answer file area (simulating a historic backup source).
         $subquestion = end($questiondata->options->questions);
         $answer = reset($subquestion->options->answers);
         $answer->answer = html_writer::img('@@PLUGINFILE@@/legacy.png', 'Legacy');
@@ -168,12 +167,11 @@ final class restore_test extends \advanced_testcase {
             'legacy.png'
         ));
 
-        // Clear adhoc tasks queue to ensure a clean slate before backup/restore steps.
-        $DB->delete_records('task_adhoc');
-        $this->assertEmpty($DB->get_records('task_adhoc'));
-
-        // Duplicate the quiz, duplicating its context and therefore restoring the legacy question.
-        duplicate_module($course1, get_fast_modinfo($course1)->get_cm($quiz->cmid));
+        // Run restore and ignore trace output from synchronous migration tasks.
+        ob_start();
+        $cmactions = new cmactions($course1);
+        $cmactions->duplicate($quiz->cmid);
+        ob_end_clean();
 
         // The question table should now possess both the original question and one restored copy.
         $restoredquestions = $DB->get_records('question', ['qtype' => 'multianswer']);
@@ -181,50 +179,14 @@ final class restore_test extends \advanced_testcase {
         $restoredquestion = array_values(
             array_filter(
                 $restoredquestions,
-                fn($questionrecord) => (int) $questionrecord->id !== (int) $question->id
+                fn($questionrecord): bool => (int) $questionrecord->id !== (int) $question->id
             )
         );
         $this->assertCount(1, $restoredquestion);
         $newquestion = reset($restoredquestion);
         $newquestiondata = question_bank::load_question_data($newquestion->id);
 
-        // Before the adhoc task runs, restored legacy files should still only be in child answer areas.
-        $restoredsubquestion = end($newquestiondata->options->questions);
-        $restoredanswer = reset($restoredsubquestion->options->answers);
-        $this->assertTrue($fs->file_exists(
-            $newquestiondata->contextid,
-            'question',
-            'answer',
-            $restoredanswer->id,
-            '/',
-            'legacy.png'
-        ));
-        $this->assertFalse($fs->file_exists(
-            $newquestiondata->contextid,
-            'question',
-            'questiontext',
-            $newquestion->id,
-            '/',
-            'legacy.png'
-        ));
-
-        // Verify restore queued the migration task and run it.
-        $task = manager::get_next_adhoc_task(
-            time(),
-            true,
-            copy_legacy_answer_files::class,
-        );
-        $this->assertInstanceOf(copy_legacy_answer_files::class, $task);
-
-        // Assert that expected migration output is produced.
-        $this->expectOutputRegex('~Copied \d+ legacy Cloze answer files to parent questiontext areas~');
-
-        $taskid = $task->get_id();
-        $task->execute();
-        manager::adhoc_task_complete($task);
-        $this->assertFalse($DB->record_exists('task_adhoc', ['id' => $taskid]));
-
-        // Verify the target restored question had its child files fully migrated to the parent area.
+        // Verify the legacy answer file has been migrated to the correct file area in the restored quiz.
         $this->assertTrue($fs->file_exists(
             $newquestiondata->contextid,
             'question',

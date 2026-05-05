@@ -18,6 +18,7 @@ namespace qtype_multianswer;
 
 use context_system;
 use context_user;
+use core\context;
 use html_writer;
 use qtype_multianswer;
 use qtype_multianswer_edit_form;
@@ -187,6 +188,7 @@ final class question_type_test extends \advanced_testcase {
         /** @var \core_question_generator $generator */
         $generator = $this->getDataGenerator()->get_plugin_generator('core_question');
         $category = $generator->create_question_category(['contextid' => $syscontext->id]);
+        $categorycontext = context::instance_by_id($category->contextid);
 
         $filename = 'cat.png';
         [$draftitemid, $imageurl] = $this->create_draft_file_url($filename);
@@ -194,7 +196,7 @@ final class question_type_test extends \advanced_testcase {
         // Simulate submitting the question edit form with a subquestion featuring the embedded image.
         $fromform = test_question_maker::get_question_form_data('multianswer');
         $fromform->name = 'Cloze with answer image';
-        $fromform->category = "{$category->id},{$syscontext->id}";
+        $fromform->category = "{$category->id},{$categorycontext->id}";
 
         $img = html_writer::img($imageurl, 'Cat');
         $fromform->questiontext = [
@@ -214,7 +216,7 @@ final class question_type_test extends \advanced_testcase {
 
         // Assert the physical file was permanently saved to the main parent questiontext file area.
         $this->assertTrue(get_file_storage()->file_exists(
-            $syscontext->id,
+            $categorycontext->id,
             'question',
             'questiontext',
             $question->id,
