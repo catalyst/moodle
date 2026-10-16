@@ -122,35 +122,47 @@ class database_logger implements task_logger {
         $logids = $DB->get_fieldset_select('task_log', 'id', 'timestart < :retentionperiod', $params);
         self::delete_task_logs($logids);
 
-        // Delete logs to retain a minimum number of logs.
-        $sql = "SELECT classname FROM {task_log} GROUP BY classname HAVING COUNT(classname) > :retaincount";
+        // Delete logs to retain a minimum number of logs per task and result status.
+        $sql = "SELECT classname, result
+                  FROM {task_log}
+              GROUP BY classname, result
+                HAVING COUNT(classname) > :retaincount";
         $params = [
             'retaincount' => $CFG->task_logretainruns,
         ];
-        $classes = $DB->get_fieldset_sql($sql, $params);
+        $recordset = $DB->get_recordset_sql($sql, $params);
 
-        foreach ($classes as $classname) {
+        foreach ($recordset as $record) {
             $notinsql = "";
             $params = [
-                'classname' => $classname,
+                'classname' => $record->classname,
+                'result' => $record->result,
             ];
 
             $retaincount = (int) $CFG->task_logretainruns;
             if ($retaincount) {
                 $keeplogs = $DB->get_records('task_log', [
-                        'classname' => $classname,
+                    'classname' => $record->classname,
+                    'result' => $record->result,
                     ], 'timestart DESC', 'id', 0, $retaincount);
 
                 if ($keeplogs) {
                     list($notinsql, $params) = $DB->get_in_or_equal(array_keys($keeplogs), SQL_PARAMS_NAMED, 'p', false);
-                    $params['classname'] = $classname;
+                    $params['classname'] = $record->classname;
+                    $params['result'] = $record->result;
                     $notinsql = " AND id {$notinsql}";
                 }
             }
 
-            $logids = $DB->get_fieldset_select('task_log', 'id', "classname = :classname {$notinsql}", $params);
+            $logids = $DB->get_fieldset_select(
+                'task_log',
+                'id',
+                "classname = :classname AND result = :result {$notinsql}",
+                $params
+            );
             self::delete_task_logs($logids);
         }
+        $recordset->close();
     }
 
     /**
