@@ -24,6 +24,7 @@ namespace core\task;
  * @copyright 2018 Andrew Nicols <andrew@nicols.co.uk>
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+#[\PHPUnit\Framework\Attributes\CoversMethod(\core\task\database_logger::class, 'cleanup')]
 final class database_logger_test extends \advanced_testcase {
 
     /**
@@ -416,6 +417,83 @@ final class database_logger_test extends \advanced_testcase {
         set_config('task_logretainruns', 0);
         \core\task\database_logger::cleanup();
         $this->assertEquals(0, $DB->count_records('task_log'));
+    }
+
+    /**
+     * Ensure that the run-count retention applies independently per result status (success vs failure).
+     */
+    public function test_cleanup_retainruns_per_status(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+
+        // Set a high value for task_logretention so that it does not interfere.
+        set_config('task_logretention', YEARSECS);
+
+        $date = new \DateTime();
+        $date->setTime($date->format('G'), 0);
+        $timestamp = $date->getTimestamp();
+
+        $task = new \core\task\cache_cron_task();
+        $logpath = __FILE__;
+
+        // Create 15 successful runs and 8 failed runs.
+        for ($i = 0; $i < 15; $i++) {
+            database_logger::store_log_for_task($task, $logpath, false, 1, 2, $timestamp, $timestamp + MINSECS);
+            $date->sub(new \DateInterval('PT1H'));
+        }
+        for ($i = 0; $i < 8; $i++) {
+            database_logger::store_log_for_task($task, $logpath, true, 1, 2, $timestamp, $timestamp + MINSECS);
+            $date->sub(new \DateInterval('PT1H'));
+        }
+
+        $this->assertEquals(20, get_config('core', 'task_logretainruns'));
+        $this->assertEquals(23, $DB->count_records('task_log'));
+        $this->assertEquals(15, $DB->count_records('task_log', ['classname' => cache_cron_task::class, 'result' => 0]));
+        $this->assertEquals(8, $DB->count_records('task_log', ['classname' => cache_cron_task::class, 'result' => 1]));
+
+        $successrecords = array_values($DB->get_records(
+            'task_log',
+            ['classname' => cache_cron_task::class, 'result' => 0],
+            'timestart DESC'
+        ));
+        $failedrecords = array_values($DB->get_records(
+            'task_log',
+            ['classname' => cache_cron_task::class, 'result' => 1],
+            'timestart DESC'
+        ));
+
+        // Retaining 10 runs should prune successful runs to 10 while leaving all 8 older failed runs intact.
+        set_config('task_logretainruns', 10);
+        database_logger::cleanup();
+
+        $this->assertEquals(18, $DB->count_records('task_log'));
+        $this->assertEquals(10, $DB->count_records('task_log', ['classname' => cache_cron_task::class, 'result' => 0]));
+        $this->assertEquals(8, $DB->count_records('task_log', ['classname' => cache_cron_task::class, 'result' => 1]));
+        $this->assertEquals(
+            array_slice($successrecords, 0, 10),
+            array_values($DB->get_records('task_log', ['classname' => cache_cron_task::class, 'result' => 0], 'timestart DESC'))
+        );
+        $this->assertEquals(
+            $failedrecords,
+            array_values($DB->get_records('task_log', ['classname' => cache_cron_task::class, 'result' => 1], 'timestart DESC'))
+        );
+
+        // Retaining 5 runs should prune both successful and failed runs to 5 each (10 total).
+        set_config('task_logretainruns', 5);
+        database_logger::cleanup();
+
+        $this->assertEquals(10, $DB->count_records('task_log'));
+        $this->assertEquals(5, $DB->count_records('task_log', ['classname' => cache_cron_task::class, 'result' => 0]));
+        $this->assertEquals(5, $DB->count_records('task_log', ['classname' => cache_cron_task::class, 'result' => 1]));
+        $this->assertEquals(
+            array_slice($successrecords, 0, 5),
+            array_values($DB->get_records('task_log', ['classname' => cache_cron_task::class, 'result' => 0], 'timestart DESC'))
+        );
+        $this->assertEquals(
+            array_slice($failedrecords, 0, 5),
+            array_values($DB->get_records('task_log', ['classname' => cache_cron_task::class, 'result' => 1], 'timestart DESC'))
+        );
     }
 
     /**
