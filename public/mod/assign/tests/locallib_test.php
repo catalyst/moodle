@@ -233,6 +233,36 @@ final class locallib_test extends \advanced_testcase {
         $this->assertStringContainsString(get_string('nothingtodisplay'), $output);
     }
 
+    /**
+     * Test that the grading table renders when no feedback plugins or grade item are enabled.
+     */
+    public function test_gradingtable_no_grade_and_feedback_disabled(): void {
+        global $PAGE;
+
+        $this->resetAfterTest();
+
+        $course = $this->getDataGenerator()->create_course();
+        $teacher = $this->getDataGenerator()->create_and_enrol($course, 'teacher');
+        $student = $this->getDataGenerator()->create_and_enrol($course);
+        $this->setUser($teacher);
+
+        $params = ['grade' => GRADE_TYPE_NONE];
+        foreach (array_keys(\core_component::get_plugin_list('assignfeedback')) as $plugin) {
+            $params[$plugin . '_enabled'] = 0;
+        }
+        $assign = $this->create_instance($course, $params);
+
+        $PAGE->set_url(new \moodle_url('/mod/assign/view.php', [
+            'id' => $assign->get_course_module()->id,
+            'action' => 'grading',
+        ]));
+
+        $gradingtable = new \assign_grading_table($assign, 1, '', 0, true);
+        $output = $assign->get_renderer()->render($gradingtable);
+
+        $this->assertStringContainsString(fullname($student), $output);
+    }
+
 
     /**
      * Test submissions with extension date.

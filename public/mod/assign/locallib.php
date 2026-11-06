@@ -2075,12 +2075,14 @@ class assign {
             }
 
             $penaltystatus = '';
-            $gradegrade = new \grade_grade();
-            $gradegrade->deductedmark = $deductedmark;
-            $gradegrade->overridden = $userid > 0 ? $this->get_grade_item()->get_grade($userid)->overridden : 0;
-            $gradegrade->itemid = $this->get_grade_item()->id;
-            $gradegrade->userid = $userid;
-            $penaltystatus = \core_grades\penalty_manager::render_penalty_status($gradegrade, $showexemptions);
+            if ($deductedmark > 0) {
+                $gradegrade = new \grade_grade();
+                $gradegrade->deductedmark = $deductedmark;
+                $gradegrade->overridden = $userid > 0 ? $this->get_grade_item()->get_grade($userid)->overridden : 0;
+                $gradegrade->itemid = $this->get_grade_item()->id;
+                $gradegrade->userid = $userid;
+                $penaltystatus = \core_grades\penalty_manager::render_penalty_status($gradegrade, $showexemptions);
+            }
             return $penaltystatus . $o;
         } else {
             // Scale.
